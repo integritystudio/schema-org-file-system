@@ -2205,10 +2205,43 @@ class ContentBasedFileOrganizer:
             return ('business', 'other', None, [])
 
         # =========================================================
-        # AUDIO FILES: .wav, .ogg, .mp3, .flac, .aac → Media/Audio
+        # AUDIO FILES: Check for game audio first, then Media/Audio
         # =========================================================
         audio_extensions = {'.wav', '.ogg', '.mp3', '.flac', '.aac', '.m4a', '.wma'}
         if ext in audio_extensions:
+            # Game audio keywords - sound effects and music
+            # Note: Avoid 'cast' as it matches 'podcast'
+            game_audio_keywords = [
+                'bolt', 'spell', 'magic', 'spellcast', 'chirp', 'crossbow', 'dagger',
+                'sword', 'arrow', 'bow', 'heal', 'potion', 'lightning', 'fire',
+                'ice', 'acid', 'poison', 'explosion', 'blast', 'summon', 'dispel',
+                'petrification', 'neutralize', 'slow', 'darkness', 'achievement',
+                'quest', 'unlock', 'lock', 'door', 'chest', 'coin', 'pickup',
+                'attack', 'hit', 'damage', 'death', 'footstep', 'jump', 'land',
+                'monster', 'creature', 'enemy', 'boss', 'battle', 'combat',
+                'starving', 'hunger', 'thirst', 'eat', 'drink', 'sleep',
+                'fiddle', 'lute', 'mandoline', 'glockenspiel', 'instrument',
+                'identify', 'greater', 'mental', 'melee', 'axe', 'mace', 'whip',
+                'sabre', 'staff', 'thunder', 'confusion', 'telekinetic', 'mind',
+                'cure', 'light', 'firebolt', 'fireball', 'boomer', 'skur',
+                # Game music keywords
+                'dungeon', 'castle', 'forest', 'town', 'village', 'temple',
+                'ruins', 'cave', 'mountain', 'ocean', 'desert', 'snow', 'victory',
+                'defeat', 'theme', 'menu', 'credits', 'intro', 'outro', 'mysterious',
+                'dark', 'epic', 'calm', 'peaceful', 'tension', 'chaos', 'hope',
+                'despair', 'triumph', 'march', 'symphony', 'monotony', 'drakalor',
+                'altar', 'lawful', 'chaotic', 'dwarven', 'elven', 'orcish', 'halls',
+                'abandon', 'corrupting', 'breeze', 'clockwork', 'knowledge', 'final',
+                'welcome', 'khelavaster', 'prophecy', 'spiraling', 'stairs', 'windy',
+                'growth', 'warm', 'folk', 'peace', 'heritage', 'browsing', 'dusty',
+                'tomes', 'dead', 'silent', 'ancardia', 'goblin', 'drums', 'bird'
+            ]
+            stem_lower = stem.lower()
+            for keyword in game_audio_keywords:
+                if keyword in stem_lower:
+                    print(f"  ✓ Filename pattern: Game audio file ({stem}{ext}) → GameAssets/Audio")
+                    return ('game_assets', 'audio', None, [])
+            # Default to Media/Audio for non-game audio
             print(f"  ✓ Filename pattern: Audio file ({ext})")
             return ('media', 'audio_other', None, [])
 
