@@ -1932,7 +1932,8 @@ class ContentBasedFileOrganizer:
         marketing_patterns = ['marketingstrategy', 'marketing_strategy', 'marketing-strategy',
                              'marketmap', 'market_map', 'market-map', 'marketanalysis', 'market_analysis',
                              'competitoranalysis', 'competitor_analysis', 'brandstrategy', 'brand_strategy',
-                             'contentcalendar', 'content_calendar', 'socialmedia', 'social_media']
+                             'contentcalendar', 'content_calendar', 'socialmedia', 'social_media',
+                             'infographic', 'info_graphic', 'info-graphic']
         if any(p in stem for p in marketing_patterns):
             print(f"  ✓ Filename pattern: Marketing document")
             return ('business', 'marketing', None, [])
@@ -1979,7 +1980,9 @@ class ContentBasedFileOrganizer:
         # Skip code files - they go to Technical even if they have business keywords
         # =========================================================
         # Code file extensions that should NOT be matched by business patterns
-        business_skip_extensions = {'.py', '.js', '.ts', '.jsx', '.tsx', '.java', '.go', '.rs', '.rb', '.php'}
+        # Includes web build artifacts (css, scss) that often have hashed names like client.063172a3.css
+        business_skip_extensions = {'.py', '.js', '.ts', '.jsx', '.tsx', '.java', '.go', '.rs', '.rb', '.php',
+                                   '.css', '.scss', '.less', '.sass', '.html', '.htm', '.vue', '.svelte'}
 
         # CRM files (but not code files like contacts.py, essentialcontacts_v1_client.py)
         if ext not in business_skip_extensions:
