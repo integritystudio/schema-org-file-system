@@ -1,0 +1,22 @@
+{
+  "full_video": {
+    "title": "Product Demo 2024",
+    "description": "Complete walkthrough of our new product features",
+    "width": 1920,
+    "height": 1080,
+    "duration": 450.0,
+    "bitrate": 5000,
+    "codec": "H.264",
+    "audio_codec": "AAC",
+    "upload_date": "2024-10-15"
+  },
+  "minimal_video": {
+    "title": "Quick Clip"
+  },
+  "screen_recording": {
+    "width": 2560,
+    "height": 1440,
+    "duration": 120.0,
+    "codec": "H.265"
+  }
+}

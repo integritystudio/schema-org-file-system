@@ -1,0 +1,26 @@
+{
+  "basic_photo": {
+    "Artist": "John Photographer",
+    "Make": "Canon",
+    "Model": "EOS 5D Mark IV",
+    "DateTime": "2024:06:15 14:30:00",
+    "DateTimeOriginal": "2024:06:15 14:30:00",
+    "GPSLatitude": 37.7749,
+    "GPSLongitude": -122.4194,
+    "ImageWidth": 5472,
+    "ImageHeight": 3648,
+    "Copyright": "2024 John Photographer",
+    "ImageDescription": "Sunset over Golden Gate Bridge"
+  },
+  "minimal_photo": {
+    "Make": "iPhone",
+    "Model": "15 Pro"
+  },
+  "with_location_only": {
+    "GPSLatitude": 40.7128,
+    "GPSLongitude": -74.0060
+  },
+  "with_artist_only": {
+    "Artist": "Jane Artist"
+  }
+}

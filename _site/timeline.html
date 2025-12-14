@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organization Timeline - Schema.org File System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --accent: #f5576c;
+            --dark-bg: #0f1419;
+            --dark-surface: #1a1f2e;
+            --dark-card: #252d3d;
+            --dark-border: #333d50;
+            --text-primary: #e8eaed;
+            --text-secondary: #9aa0a6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --timeline-line: #3a4556;
+            --glow-primary: rgba(102, 126, 234, 0.3);
+            --glow-accent: rgba(245, 87, 108, 0.3);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            padding: 1.5rem 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 2rem;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.875rem;
+        }
+
+        .header-stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .header-stat-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            opacity: 0.8;
+            letter-spacing: 0.05em;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Controls Bar */
+        .controls-bar {
+            background: var(--dark-surface);
+            border: 1px solid var(--dark-border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 0.5rem;
+            background: var(--dark-card);
+            padding: 0.25rem;
+            border-radius: 0.5rem;
+        }
+
+        .view-toggle button {
+            padding: 0.5rem 1rem;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 0.4rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .view-toggle button.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 2px 8px var(--glow-primary);
+        }
+
+        .zoom-controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .zoom-btn {
+            width: 36px;
+            height: 36px;
+            border: 1px solid var(--dark-border);
+            background: var(--dark-card);
+            color: var(--text-primary);
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .zoom-btn:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            box-shadow: 0 2px 8px var(--glow-primary);
+        }
+
+        .zoom-level {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            min-width: 50px;
+            text-align: center;
+        }
+
+        /* Timeline Container */
+        .timeline-container {
+            position: relative;
+            margin-top: 3rem;
+            min-height: 600px;
+        }
+
+        /* Timeline Spine */
+        .timeline-spine {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg,
+                var(--primary) 0%,
+                var(--timeline-line) 30%,
+                var(--timeline-line) 70%,
+                var(--accent) 100%
+            );
+            transform: translateX(-50%);
+            border-radius: 2px;
+            box-shadow: 0 0 20px var(--glow-primary);
+        }
+
+        /* Timeline Item */
+        .timeline-item {
+            position: relative;
+            margin-bottom: 6rem;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .timeline-item:nth-child(odd) .timeline-content {
+            margin-left: 0;
+            margin-right: calc(50% + 3rem);
+        }
+
+        .timeline-item:nth-child(even) .timeline-content {
+            margin-left: calc(50% + 3rem);
+            margin-right: 0;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Timeline Marker */
+        .timeline-marker {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 20px;
+            background: var(--primary);
+            border: 4px solid var(--dark-surface);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 100;
+            box-shadow: 0 0 0 0 var(--glow-primary);
+        }
+
+        .timeline-marker:hover {
+            width: 28px;
+            height: 28px;
+            box-shadow: 0 0 20px var(--glow-primary);
+            animation: pulse 1.5s infinite;
+        }
+
+        .timeline-marker.success {
+            background: var(--success);
+        }
+
+        .timeline-marker.warning {
+            background: var(--warning);
+        }
+
+        .timeline-marker.error {
+            background: var(--danger);
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 var(--glow-primary); }
+            50% { box-shadow: 0 0 0 15px transparent; }
+        }
+
+        /* Timeline Content Card */
+        .timeline-content {
+            background: var(--dark-surface);
+            border: 1px solid var(--dark-border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            position: relative;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .timeline-content:hover {
+            border-color: var(--primary);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transform: translateY(-4px);
+        }
+
+        .timeline-content::before {
+            content: '';
+            position: absolute;
+            top: 24px;
+            width: 0;
+            height: 0;
+            border: 12px solid transparent;
+        }
+
+        .timeline-item:nth-child(odd) .timeline-content::before {
+            right: -24px;
+            border-left-color: var(--dark-border);
+        }
+
+        .timeline-item:nth-child(even) .timeline-content::before {
+            left: -24px;
+            border-right-color: var(--dark-border);
+        }
+
+        /* Session Header */
+        .session-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .session-date {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+
+        .session-id {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            font-family: monospace;
+        }
+
+        .session-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .session-badge.dry-run {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .session-badge.live {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .metric {
+            background: var(--dark-card);
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--dark-border);
+        }
+
+        .metric-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .metric-value.success {
+            color: var(--success);
+        }
+
+        .metric-value.danger {
+            color: var(--danger);
+        }
+
+        .metric-value.warning {
+            color: var(--warning);
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            height: 6px;
+            background: var(--dark-card);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            border-radius: 3px;
+            transition: width 0.6s ease;
+        }
+
+        /* Category Tags */
+        .category-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .category-tag {
+            padding: 0.25rem 0.75rem;
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .category-count {
+            background: var(--primary);
+            color: white;
+            padding: 0.1rem 0.4rem;
+            border-radius: 9999px;
+            font-weight: 700;
+            font-size: 0.65rem;
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        /* Snapshot Modal */
+        .snapshot-modal {
+            background: var(--dark-surface);
+            border: 1px solid var(--dark-border);
+            border-radius: 1.5rem;
+            max-width: 1000px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: modalSlideIn 0.4s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .modal-header {
+            padding: 2rem;
+            border-bottom: 1px solid var(--dark-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .modal-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .close-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 2rem;
+            cursor: pointer;
+            line-height: 1;
+            transition: all 0.3s;
+            padding: 0;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+        }
+
+        .close-btn:hover {
+            background: var(--dark-card);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 2rem;
+        }
+
+        /* Comparison View */
+        .comparison-container {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .comparison-arrow {
+            font-size: 2rem;
+            color: var(--primary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .comparison-arrow span {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .comparison-card {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+
+        .diff-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            margin-left: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .diff-indicator.positive {
+            color: var(--success);
+        }
+
+        .diff-indicator.negative {
+            color: var(--danger);
+        }
+
+        /* Charts Section */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .chart-card {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+
+        .chart-title {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        /* Loading State */
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem;
+            gap: 1rem;
+        }
+
+        .loading-spinner {
+            width: 64px;
+            height: 64px;
+            border: 4px solid var(--dark-border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .timeline-item:nth-child(odd) .timeline-content,
+            .timeline-item:nth-child(even) .timeline-content {
+                margin-left: 3rem;
+                margin-right: 0;
+            }
+
+            .timeline-spine {
+                left: 20px;
+            }
+
+            .timeline-marker {
+                left: 20px;
+            }
+
+            .timeline-content::before {
+                left: -24px !important;
+                right: auto !important;
+                border-right-color: var(--dark-border) !important;
+                border-left-color: transparent !important;
+            }
+
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .comparison-container {
+                grid-template-columns: 1fr;
+            }
+
+            .comparison-arrow {
+                transform: rotate(90deg);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .header-stats {
+                width: 100%;
+                justify-content: space-around;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Utility Classes */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--secondary);
+            box-shadow: 0 4px 16px var(--glow-primary);
+        }
+
+        .btn-secondary {
+            background: var(--dark-card);
+            color: var(--text-primary);
+            border: 1px solid var(--dark-border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--dark-surface);
+            border-color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>
+                <span>📊</span>
+                Organization Timeline
+            </h1>
+            <div class="header-stats">
+                <div class="header-stat-item">
+                    <div class="header-stat-value" id="totalSessions">0</div>
+                    <div class="header-stat-label">Sessions</div>
+                </div>
+                <div class="header-stat-item">
+                    <div class="header-stat-value" id="totalFiles">0</div>
+                    <div class="header-stat-label">Files Processed</div>
+                </div>
+                <div class="header-stat-item">
+                    <div class="header-stat-value" id="successRate">0%</div>
+                    <div class="header-stat-label">Success Rate</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="controls-bar">
+            <div class="view-toggle">
+                <button class="active" onclick="switchView('timeline')">Timeline View</button>
+                <button onclick="switchView('list')">List View</button>
+                <button onclick="switchView('stats')">Statistics</button>
+            </div>
+            <div class="zoom-controls">
+                <button class="zoom-btn" onclick="adjustZoom(-1)">−</button>
+                <span class="zoom-level" id="zoomLevel">100%</span>
+                <button class="zoom-btn" onclick="adjustZoom(1)">+</button>
+            </div>
+            <button class="btn btn-secondary" onclick="compareLatestSessions()">
+                Compare Recent Runs
+            </button>
+        </div>
+
+        <div id="timelineView">
+            <div class="loading-container" id="loadingState">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">Loading organization history...</div>
+            </div>
+            <div class="timeline-container" id="timelineContainer" style="display: none;">
+                <div class="timeline-spine"></div>
+                <div id="timelineItems"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Snapshot Modal -->
+    <div class="modal-overlay" id="snapshotModal" onclick="closeModal(event)">
+        <div class="snapshot-modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div>
+                    <div class="modal-title" id="modalTitle">Session Details</div>
+                    <div class="session-date" id="modalDate"></div>
+                </div>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Content will be dynamically inserted -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparison Modal -->
+    <div class="modal-overlay" id="comparisonModal" onclick="closeModal(event)">
+        <div class="snapshot-modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div>
+                    <div class="modal-title">Session Comparison</div>
+                </div>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="comparisonBody">
+                <!-- Comparison content will be dynamically inserted -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock data structure - replace with actual API call
+        let sessions = [];
+        let zoomLevel = 100;
+        let currentView = 'timeline';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSessionData();
+        });
+
+        async function loadSessionData() {
+            try {
+                // TODO: Replace with actual API endpoint
+                // const response = await fetch('/api/sessions');
+                // sessions = await response.json();
+
+                // Mock data for demonstration
+                sessions = generateMockData();
+
+                renderTimeline();
+                updateHeaderStats();
+
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('timelineContainer').style.display = 'block';
+            } catch (error) {
+                console.error('Failed to load session data:', error);
+                document.getElementById('loadingState').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <h2>Failed to load data</h2>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadSessionData()">Retry</button>
+                    </div>
+                `;
+            }
+        }
+
+        function generateMockData() {
+            // Generate 17 mock sessions based on your data structure
+            const mockSessions = [];
+            const now = new Date();
+
+            for (let i = 0; i < 17; i++) {
+                const startDate = new Date(now - (16 - i) * 86400000 * 5); // Every 5 days
+                const duration = Math.random() * 300 + 60; // 60-360 seconds
+                const totalFiles = Math.floor(Math.random() * 5000) + 500;
+                const organizedCount = Math.floor(totalFiles * (0.8 + Math.random() * 0.15));
+                const errorCount = Math.floor(totalFiles * Math.random() * 0.05);
+                const skippedCount = totalFiles - organizedCount - errorCount;
+
+                mockSessions.push({
+                    id: `session-${i + 1}`,
+                    started_at: startDate.toISOString(),
+                    completed_at: new Date(startDate.getTime() + duration * 1000).toISOString(),
+                    dry_run: i < 3, // First 3 are dry runs
+                    total_files: totalFiles,
+                    organized_count: organizedCount,
+                    skipped_count: skippedCount,
+                    error_count: errorCount,
+                    total_cost: (Math.random() * 10 + 2).toFixed(2),
+                    processing_time: duration.toFixed(2),
+                    categories: generateCategoryDistribution()
+                });
+            }
+
+            return mockSessions;
+        }
+
+        function generateCategoryDistribution() {
+            const categories = ['GameAssets', 'Photos', 'Documents', 'Legal', 'Media', 'Code'];
+            const distribution = {};
+            let remaining = 100;
+
+            categories.forEach((cat, i) => {
+                if (i === categories.length - 1) {
+                    distribution[cat] = remaining;
+                } else {
+                    const value = Math.floor(Math.random() * remaining * 0.4);
+                    distribution[cat] = value;
+                    remaining -= value;
+                }
+            });
+
+            return distribution;
+        }
+
+        function renderTimeline() {
+            const container = document.getElementById('timelineItems');
+            container.innerHTML = '';
+
+            sessions.forEach((session, index) => {
+                const item = createTimelineItem(session, index);
+                container.appendChild(item);
+
+                // Stagger animation
+                setTimeout(() => {
+                    item.style.animationDelay = `${index * 0.1}s`;
+                }, 50);
+            });
+        }
+
+        function createTimelineItem(session, index) {
+            const item = document.createElement('div');
+            item.className = 'timeline-item';
+            item.style.animationDelay = `${index * 0.1}s`;
+
+            const successRate = (session.organized_count / session.total_files * 100).toFixed(1);
+            const markerClass = session.error_count > 100 ? 'error' :
+                               session.error_count > 10 ? 'warning' : 'success';
+
+            const date = new Date(session.started_at);
+            const formattedDate = date.toLocaleDateString('en-US', {
+                month: 'short', day: 'numeric', year: 'numeric'
+            });
+            const formattedTime = date.toLocaleTimeString('en-US', {
+                hour: '2-digit', minute: '2-digit'
+            });
+
+            item.innerHTML = `
+                <div class="timeline-marker ${markerClass}" onclick="openSnapshot('${session.id}')"></div>
+                <div class="timeline-content" onclick="openSnapshot('${session.id}')">
+                    <div class="session-header">
+                        <div>
+                            <div class="session-date">${formattedDate} at ${formattedTime}</div>
+                            <div class="session-id">${session.id}</div>
+                        </div>
+                        <span class="session-badge ${session.dry_run ? 'dry-run' : 'live'}">
+                            ${session.dry_run ? 'Dry Run' : 'Live'}
+                        </span>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <div class="metric-label">Total Files</div>
+                            <div class="metric-value">${session.total_files.toLocaleString()}</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Organized</div>
+                            <div class="metric-value success">${session.organized_count.toLocaleString()}</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Errors</div>
+                            <div class="metric-value ${session.error_count > 10 ? 'danger' : ''}">${session.error_count}</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Cost</div>
+                            <div class="metric-value">$${session.total_cost}</div>
+                        </div>
+                    </div>
+
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${successRate}%"></div>
+                    </div>
+
+                    <div class="category-tags">
+                        ${Object.entries(session.categories).slice(0, 4).map(([cat, count]) => `
+                            <div class="category-tag">
+                                ${cat}
+                                <span class="category-count">${count}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+
+            return item;
+        }
+
+        function openSnapshot(sessionId) {
+            const session = sessions.find(s => s.id === sessionId);
+            if (!session) return;
+
+            const date = new Date(session.started_at);
+            const formattedDate = date.toLocaleDateString('en-US', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+
+            document.getElementById('modalTitle').textContent = `Session: ${session.id}`;
+            document.getElementById('modalDate').textContent = formattedDate;
+
+            const duration = parseFloat(session.processing_time);
+            const filesPerSecond = (session.total_files / duration).toFixed(2);
+            const costPerFile = (parseFloat(session.total_cost) / session.total_files).toFixed(4);
+            const successRate = (session.organized_count / session.total_files * 100).toFixed(2);
+
+            document.getElementById('modalBody').innerHTML = `
+                <div class="metrics-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 2rem;">
+                    <div class="metric">
+                        <div class="metric-label">Total Files</div>
+                        <div class="metric-value">${session.total_files.toLocaleString()}</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Successfully Organized</div>
+                        <div class="metric-value success">${session.organized_count.toLocaleString()}</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Skipped</div>
+                        <div class="metric-value warning">${session.skipped_count.toLocaleString()}</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Errors</div>
+                        <div class="metric-value ${session.error_count > 10 ? 'danger' : ''}">${session.error_count}</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Processing Time</div>
+                        <div class="metric-value">${Math.floor(duration / 60)}m ${Math.floor(duration % 60)}s</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Total Cost</div>
+                        <div class="metric-value">$${session.total_cost}</div>
+                    </div>
+                </div>
+
+                <div class="metrics-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 2rem;">
+                    <div class="metric">
+                        <div class="metric-label">Success Rate</div>
+                        <div class="metric-value">${successRate}%</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Files/Second</div>
+                        <div class="metric-value">${filesPerSecond}</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Cost/File</div>
+                        <div class="metric-value">$${costPerFile}</div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <div class="chart-title">Category Distribution</div>
+                        <div id="categoryChart">
+                            ${Object.entries(session.categories).map(([cat, count]) => {
+                                const percentage = (count / session.total_files * 100).toFixed(1);
+                                return `
+                                    <div style="margin-bottom: 0.75rem;">
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                                            <span style="font-size: 0.875rem; color: var(--text-secondary);">${cat}</span>
+                                            <span style="font-size: 0.875rem; color: var(--text-primary); font-weight: 700;">${percentage}%</span>
+                                        </div>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: ${percentage}%"></div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-title">Performance Metrics</div>
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div class="metric">
+                                <div class="metric-label">Run Type</div>
+                                <span class="session-badge ${session.dry_run ? 'dry-run' : 'live'}">
+                                    ${session.dry_run ? 'Dry Run (No Files Moved)' : 'Live Run (Files Moved)'}
+                                </span>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">Average Processing Time</div>
+                                <div class="metric-value">${(duration / session.total_files * 1000).toFixed(2)}ms</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('snapshotModal').classList.add('active');
+        }
+
+        function compareLatestSessions() {
+            if (sessions.length < 2) {
+                alert('Need at least 2 sessions to compare');
+                return;
+            }
+
+            const latest = sessions[sessions.length - 1];
+            const previous = sessions[sessions.length - 2];
+
+            const filesDiff = latest.total_files - previous.total_files;
+            const organizedDiff = latest.organized_count - previous.organized_count;
+            const errorDiff = latest.error_count - previous.error_count;
+            const costDiff = (parseFloat(latest.total_cost) - parseFloat(previous.total_cost)).toFixed(2);
+
+            document.getElementById('comparisonBody').innerHTML = `
+                <div class="comparison-container">
+                    <div class="comparison-card">
+                        <h3 style="margin-bottom: 1rem;">Previous Run</h3>
+                        <div class="session-date">${new Date(previous.started_at).toLocaleDateString()}</div>
+                        <div class="metrics-grid" style="grid-template-columns: 1fr; gap: 0.75rem; margin-top: 1rem;">
+                            <div class="metric">
+                                <div class="metric-label">Total Files</div>
+                                <div class="metric-value">${previous.total_files.toLocaleString()}</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">Organized</div>
+                                <div class="metric-value success">${previous.organized_count.toLocaleString()}</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">Errors</div>
+                                <div class="metric-value">${previous.error_count}</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">Cost</div>
+                                <div class="metric-value">$${previous.total_cost}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="comparison-arrow">
+                        →
+                        <span>vs</span>
+                    </div>
+
+                    <div class="comparison-card">
+                        <h3 style="margin-bottom: 1rem;">Latest Run</h3>
+                        <div class="session-date">${new Date(latest.started_at).toLocaleDateString()}</div>
+                        <div class="metrics-grid" style="grid-template-columns: 1fr; gap: 0.75rem; margin-top: 1rem;">
+                            <div class="metric">
+                                <div class="metric-label">Total Files</div>
+                                <div class="metric-value">
+                                    ${latest.total_files.toLocaleString()}
+                                    <span class="diff-indicator ${filesDiff >= 0 ? 'positive' : 'negative'}">
+                                        ${filesDiff >= 0 ? '↑' : '↓'} ${Math.abs(filesDiff).toLocaleString()}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">Organized</div>
+                                <div class="metric-value success">
+                                    ${latest.organized_count.toLocaleString()}
+                                    <span class="diff-indicator ${organizedDiff >= 0 ? 'positive' : 'negative'}">
+                                        ${organizedDiff >= 0 ? '↑' : '↓'} ${Math.abs(organizedDiff).toLocaleString()}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">Errors</div>
+                                <div class="metric-value">
+                                    ${latest.error_count}
+                                    <span class="diff-indicator ${errorDiff <= 0 ? 'positive' : 'negative'}">
+                                        ${errorDiff >= 0 ? '↑' : '↓'} ${Math.abs(errorDiff)}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">Cost</div>
+                                <div class="metric-value">
+                                    $${latest.total_cost}
+                                    <span class="diff-indicator ${parseFloat(costDiff) <= 0 ? 'positive' : 'negative'}">
+                                        ${parseFloat(costDiff) >= 0 ? '↑' : '↓'} $${Math.abs(parseFloat(costDiff)).toFixed(2)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 2rem; padding: 1.5rem; background: var(--dark-card); border-radius: 1rem;">
+                    <h3 style="margin-bottom: 1rem;">Analysis</h3>
+                    <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.5rem;">
+                        <li style="color: var(--text-secondary);">
+                            ${filesDiff >= 0 ? '📈' : '📉'}
+                            ${Math.abs((filesDiff / previous.total_files * 100).toFixed(1))}% ${filesDiff >= 0 ? 'increase' : 'decrease'} in total files processed
+                        </li>
+                        <li style="color: var(--text-secondary);">
+                            ${errorDiff <= 0 ? '✅' : '⚠️'}
+                            Error rate ${errorDiff <= 0 ? 'improved' : 'increased'} by ${Math.abs(errorDiff)} files
+                        </li>
+                        <li style="color: var(--text-secondary);">
+                            💰 Cost per file: $${(parseFloat(latest.total_cost) / latest.total_files).toFixed(4)}
+                            (${((parseFloat(latest.total_cost) / latest.total_files - parseFloat(previous.total_cost) / previous.total_files) >= 0 ? '+' : '')}${((parseFloat(latest.total_cost) / latest.total_files - parseFloat(previous.total_cost) / previous.total_files) * 100).toFixed(2)}%)
+                        </li>
+                    </ul>
+                </div>
+            `;
+
+            document.getElementById('comparisonModal').classList.add('active');
+        }
+
+        function closeModal(event) {
+            if (event && event.target.classList.contains('modal-overlay')) {
+                event.target.classList.remove('active');
+            } else {
+                document.querySelectorAll('.modal-overlay').forEach(modal => {
+                    modal.classList.remove('active');
+                });
+            }
+        }
+
+        function updateHeaderStats() {
+            const totalFiles = sessions.reduce((sum, s) => sum + s.total_files, 0);
+            const totalOrganized = sessions.reduce((sum, s) => sum + s.organized_count, 0);
+            const successRate = ((totalOrganized / totalFiles) * 100).toFixed(1);
+
+            document.getElementById('totalSessions').textContent = sessions.length;
+            document.getElementById('totalFiles').textContent = totalFiles.toLocaleString();
+            document.getElementById('successRate').textContent = successRate + '%';
+        }
+
+        function switchView(view) {
+            currentView = view;
+            document.querySelectorAll('.view-toggle button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // TODO: Implement different views
+            if (view === 'list') {
+                console.log('Switch to list view');
+            } else if (view === 'stats') {
+                console.log('Switch to stats view');
+            } else {
+                console.log('Switch to timeline view');
+            }
+        }
+
+        function adjustZoom(direction) {
+            zoomLevel += direction * 10;
+            zoomLevel = Math.max(50, Math.min(200, zoomLevel));
+            document.getElementById('zoomLevel').textContent = zoomLevel + '%';
+
+            const container = document.getElementById('timelineItems');
+            container.style.transform = `scale(${zoomLevel / 100})`;
+            container.style.transformOrigin = 'top center';
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>

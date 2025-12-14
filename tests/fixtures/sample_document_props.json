@@ -1,0 +1,21 @@
+{
+  "pdf_document": {
+    "title": "Q4 Financial Report",
+    "subject": "Quarterly financial analysis",
+    "description": "Comprehensive Q4 2024 financial report with projections",
+    "keywords": "finance, quarterly, analysis",
+    "author": "Alice CFO",
+    "created": "2024-12-01T10:00:00",
+    "modified": "2024-12-05T15:30:00",
+    "language": "en",
+    "pages": 25
+  },
+  "word_document": {
+    "title": "Project Proposal",
+    "creator": "Bob Manager",
+    "created": "2024-11-15T09:00:00"
+  },
+  "minimal_document": {
+    "title": "Notes"
+  }
+}

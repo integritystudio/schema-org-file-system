@@ -1,0 +1,23 @@
+{
+  "full_track": {
+    "title": "Highway to the Danger Zone",
+    "artist": "Kenny Loggins",
+    "album": "Top Gun Soundtrack",
+    "genre": "Rock",
+    "duration": 228.5,
+    "bitrate": 320,
+    "sample_rate": 44100,
+    "track_number": 1,
+    "year": 1986,
+    "isrc": "USQY51000001"
+  },
+  "minimal_track": {
+    "title": "Untitled Track"
+  },
+  "podcast_episode": {
+    "title": "Episode 42: The Future of AI",
+    "artist": "Tech Podcast",
+    "duration": 3600,
+    "year": 2024
+  }
+}

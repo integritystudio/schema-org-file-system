@@ -1,0 +1,20 @@
+{
+  "python_project": {
+    "language": "Python",
+    "repository": {
+      "url": "https://github.com/example/myproject",
+      "branch": "main"
+    },
+    "dependencies": [
+      {"name": "numpy", "version": "1.24.0"},
+      {"name": "pandas", "version": "2.0.0"}
+    ],
+    "runtime": "Python 3.11",
+    "license": "MIT",
+    "author": "Developer Dave",
+    "functions": ["process_data", "train_model", "evaluate"]
+  },
+  "minimal_code": {
+    "language": "JavaScript"
+  }
+}

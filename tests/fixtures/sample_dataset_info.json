@@ -1,0 +1,22 @@
+{
+  "full_dataset": {
+    "name": "Customer Sales Dataset",
+    "description": "Historical sales data from 2020-2024",
+    "columns": [
+      {"name": "customer_id", "description": "Unique customer identifier"},
+      {"name": "purchase_date", "description": "Date of purchase"},
+      {"name": "amount", "description": "Purchase amount in USD"}
+    ],
+    "temporal_coverage": {
+      "start": "2020-01-01",
+      "end": "2024-12-31"
+    },
+    "spatial_coverage": "United States",
+    "format": "text/csv",
+    "rows": 1500000
+  },
+  "simple_dataset": {
+    "name": "Test Data",
+    "temporal_coverage": "2024"
+  }
+}

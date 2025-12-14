@@ -1,0 +1,25 @@
+{
+  "full_analysis": {
+    "keywords": ["machine learning", "neural networks", "classification"],
+    "topics": ["artificial intelligence", "data science"],
+    "entities": [
+      {"type": "PERSON", "text": "Alan Turing"},
+      {"type": "ORG", "name": "OpenAI"},
+      {"type": "GPE", "text": "San Francisco"},
+      {"type": "PRODUCT", "text": "GPT-4"}
+    ],
+    "language": "en",
+    "sentiment": 0.75,
+    "summary": "An overview of recent advances in machine learning and AI research."
+  },
+  "entity_only": {
+    "entities": [
+      {"type": "PERSON", "name": "Elon Musk"},
+      {"type": "ORGANIZATION", "text": "Tesla"}
+    ]
+  },
+  "sentiment_only": {
+    "sentiment": -0.5
+  },
+  "empty_analysis": {}
+}
