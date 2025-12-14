@@ -1338,6 +1338,8 @@ class ContentBasedFileOrganizer:
                 'architecture': 'Technical/Architecture',
                 'config': 'Technical/Config',
                 'data': 'Technical/Data',
+                'logs': 'Technical/Logs',
+                'web': 'Technical/Web',
                 'other': 'Technical/Other'
             },
             'creative': {
@@ -1373,6 +1375,7 @@ class ContentBasedFileOrganizer:
                 'references': 'Person',
                 'travel': 'Person/Travel',
                 'events': 'Person/Events',
+                'journal': 'Person/Journal',        # Personal writing, dreams, reflections
                 'other': 'Person'
             },
             'game_assets': {
@@ -1883,6 +1886,58 @@ class ContentBasedFileOrganizer:
             return ('skip', 'duplicate', None, [])
 
         # =========================================================
+        # LOG FILES: System logs, reorganization logs → Technical/Logs
+        # =========================================================
+        log_patterns = ['reorganization-log', 'reorganization_log', 'system-log', 'system_log',
+                       'error-log', 'error_log', 'debug-log', 'debug_log', 'access-log', 'access_log']
+        if any(p in stem for p in log_patterns) or (ext == '.log'):
+            print(f"  ✓ Filename pattern: Log file")
+            return ('technical', 'logs', None, [])
+
+        # =========================================================
+        # LEGAL DOCUMENT PATTERNS: Contracts, Corporate docs
+        # =========================================================
+        # Certificate of Formation/Filing → Legal/Corporate
+        corporate_legal_patterns = ['certificateofformation', 'certificate_of_formation', 'certificate-of-formation',
+                                   'certificateoffiling', 'certificate_of_filing', 'certificate-of-filing',
+                                   'articlesofincorporation', 'articles_of_incorporation', 'articles-of-incorporation',
+                                   'bylaws', 'operatingagreement', 'operating_agreement', 'operating-agreement']
+        if any(p in stem for p in corporate_legal_patterns):
+            print(f"  ✓ Filename pattern: Corporate legal document")
+            return ('legal', 'corporate', None, [])
+
+        # Release of Liability, NDA, General Release → Legal/Contracts
+        contract_legal_patterns = ['releaseofliability', 'release_of_liability', 'release-of-liability',
+                                  'generalrelease', 'general_release', 'general-release',
+                                  'non-disclosure', 'nondisclosure', 'confidentiality']
+        # NDA needs special handling - must be whole word or at word boundary (not inside 'calendar')
+        is_nda = (stem == 'nda' or stem.startswith('nda_') or stem.startswith('nda-') or
+                  '_nda' in stem or '-nda' in stem or stem.endswith('_nda') or stem.endswith('-nda'))
+        if any(p in stem for p in contract_legal_patterns) or is_nda:
+            print(f"  ✓ Filename pattern: Legal contract/release")
+            return ('legal', 'contracts', None, [])
+
+        # =========================================================
+        # TECHNICAL CONFIG: Login credentials, account recovery docs
+        # =========================================================
+        config_patterns = ['login', 'recovery', 'credentials', 'password', 'apikey', 'api_key', 'api-key',
+                          'techsoup', 'zoho', 'oauth', 'token', 'secret']
+        if ext in {'.docx', '.doc', '.txt', '.pdf'} and any(p in stem for p in config_patterns):
+            print(f"  ✓ Filename pattern: Config/credentials document")
+            return ('technical', 'config', None, [])
+
+        # =========================================================
+        # MARKETING PATTERNS: Strategy docs, market maps, infographics
+        # =========================================================
+        marketing_patterns = ['marketingstrategy', 'marketing_strategy', 'marketing-strategy',
+                             'marketmap', 'market_map', 'market-map', 'marketanalysis', 'market_analysis',
+                             'competitoranalysis', 'competitor_analysis', 'brandstrategy', 'brand_strategy',
+                             'contentcalendar', 'content_calendar', 'socialmedia', 'social_media']
+        if any(p in stem for p in marketing_patterns):
+            print(f"  ✓ Filename pattern: Marketing document")
+            return ('business', 'marketing', None, [])
+
+        # =========================================================
         # COMPANY MEETING NOTES: Must be before generic company patterns
         # =========================================================
         # Integrity Studio meeting notes (IntegrityWeeklyCadence-*-NotesByGemini.docx)
@@ -2020,6 +2075,20 @@ class ContentBasedFileOrganizer:
                         break
 
             print(f"  ✓ Filename pattern: Resume" + (f" ({person_name})" if person_name else ""))
+            return ('person', 'contacts', None, [person_name] if person_name else [])
+
+        # =========================================================
+        # COVER LETTERS: *coverletter*, *cover_letter* - document files
+        # =========================================================
+        cover_letter_patterns = ['coverletter', 'cover_letter', 'cover-letter']
+        if ext in document_extensions and any(p in stem for p in cover_letter_patterns):
+            # Try to extract person name from filename
+            person_name = None
+            for pattern, known_name in known_person_patterns.items():
+                if pattern in filename_lower:
+                    person_name = known_name
+                    break
+            print(f"  ✓ Filename pattern: Cover letter" + (f" ({person_name})" if person_name else ""))
             return ('person', 'contacts', None, [person_name] if person_name else [])
 
         # Check for known person names in filename (e.g., ledlie) - non-resume files
