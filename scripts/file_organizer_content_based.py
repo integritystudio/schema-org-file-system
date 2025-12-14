@@ -238,13 +238,17 @@ class ContentClassifier:
                     'presentation', 'deck', 'startup', 'company', 'venture', 'investor',
                     'growth', 'revenue model', 'unit economics', 'expansion', 'rfp',
                     'guidelines', 'program', 'service package', 'pricing', 'client',
-                    'customer', 'vendor', 'supplier', 'partner'
+                    'customer', 'vendor', 'supplier', 'partner', 'contacts', 'crm',
+                    'hiring', 'job posting', 'meeting', 'standup', 'minutes'
                 ],
                 'subcategories': {
-                    'planning': ['business plan', 'strategy', 'expansion', 'growth'],
+                    'planning': ['business plan', 'strategy', 'expansion', 'growth', 'project'],
                     'marketing': ['marketing', 'pricing', 'service package', 'pitch', 'deck'],
                     'proposals': ['proposal', 'rfp', 'guidelines'],
-                    'clients': ['client', 'customer', 'llc', 'inc', 'corp', 'company'],
+                    'crm': ['crm', 'contacts', 'microlender', 'customer'],
+                    'hr': ['hiring', 'job posting', 'team roster', 'application', 'linkedin'],
+                    'meeting_notes': ['meeting', 'standup', 'minutes', 'agenda', 'retrospective'],
+                    'clients': ['client', 'llc', 'inc', 'corp', 'company'],  # Legacy
                     'other': []
                 }
             },
@@ -1300,7 +1304,10 @@ class ContentBasedFileOrganizer:
                 'marketing': 'Business/Marketing',
                 'proposals': 'Business/Proposals',
                 'presentations': 'Business/Presentations',
-                'clients': 'Business/Clients',  # Will be further organized by company name
+                'crm': 'Business/CRM',
+                'hr': 'Business/HR',
+                'meeting_notes': 'Business/MeetingNotes',
+                'clients': 'Business/Clients',  # Legacy - prefer crm/hr
                 'other': 'Business/Other'
             },
             'personal': {
@@ -1914,33 +1921,53 @@ class ContentBasedFileOrganizer:
 
         # =========================================================
         # BUSINESS TYPE PATTERNS: CRM, HR, Operations, Planning
+        # Skip code files - they go to Technical even if they have business keywords
         # =========================================================
-        # CRM files
-        if 'crm' in stem or 'contacts' in stem or 'microlender' in stem:
-            print(f"  ✓ Filename pattern: CRM/Contacts file")
-            return ('business', 'clients', None, [])
+        # Code file extensions that should NOT be matched by business patterns
+        business_skip_extensions = {'.py', '.js', '.ts', '.jsx', '.tsx', '.java', '.go', '.rs', '.rb', '.php'}
 
-        # HR/Job posting files
-        hr_patterns = ['jobposting', 'job_posting', 'job-posting', 'linkedin',
-                       'boardmember', 'board_member', 'application', 'hiring']
-        if any(p in stem for p in hr_patterns):
-            print(f"  ✓ Filename pattern: HR file")
-            return ('business', 'clients', None, [])
+        # CRM files (but not code files like contacts.py, essentialcontacts_v1_client.py)
+        if ext not in business_skip_extensions:
+            if 'crm' in stem or 'microlender' in stem:
+                print(f"  ✓ Filename pattern: CRM/Contacts file")
+                return ('business', 'crm', None, [])
+            # Only match 'contacts' for spreadsheet/document files, not code
+            if 'contacts' in stem and ext in {'.xlsx', '.xls', '.csv', '.docx', '.pdf'}:
+                print(f"  ✓ Filename pattern: CRM/Contacts file")
+                return ('business', 'crm', None, [])
 
-        # Project tracking files
-        if 'projecttrack' in stem or 'project_track' in stem or 'project-track' in stem:
-            print(f"  ✓ Filename pattern: Project tracking")
-            return ('business', 'planning', None, [])
+        # HR/Job posting files (but not code files like application.py, linkedin.py)
+        # Note: 'application' and 'linkedin' are common in code filenames
+        hr_patterns = ['jobposting', 'job_posting', 'job-posting',
+                       'boardmember', 'board_member', 'hiring', 'teamroster', 'team_roster', 'team-roster']
+        # Only match 'application' or 'linkedin' for document files
+        hr_doc_patterns = ['application', 'linkedin']
+        if ext not in business_skip_extensions:
+            if any(p in stem for p in hr_patterns):
+                print(f"  ✓ Filename pattern: HR file")
+                return ('business', 'hr', None, [])
+            if ext in {'.xlsx', '.xls', '.csv', '.docx', '.pdf', '.webp', '.png', '.jpg'} and any(p in stem for p in hr_doc_patterns):
+                print(f"  ✓ Filename pattern: HR file")
+                return ('business', 'hr', None, [])
 
-        # Operations/Dashboard files
-        if 'dashboard' in stem or 'operations' in stem or 'toolkit' in stem:
-            print(f"  ✓ Filename pattern: Operations file")
-            return ('business', 'other', None, [])
+        # Project tracking files (but not code files)
+        if ext not in business_skip_extensions:
+            if 'projecttrack' in stem or 'project_track' in stem or 'project-track' in stem:
+                print(f"  ✓ Filename pattern: Project tracking")
+                return ('business', 'planning', None, [])
 
-        # Stand-up/meeting templates
-        if 'standup' in stem or 'stand-up' in stem or 'stand_up' in stem:
-            print(f"  ✓ Filename pattern: Meeting template")
-            return ('business', 'other', None, [])
+        # Operations/Dashboard files (but not code files like dashboard.py, operations.py)
+        if ext not in business_skip_extensions:
+            if 'dashboard' in stem or 'operations' in stem or 'toolkit' in stem:
+                print(f"  ✓ Filename pattern: Operations file")
+                return ('business', 'other', None, [])
+
+        # Stand-up/meeting templates and notes
+        meeting_patterns = ['standup', 'stand-up', 'stand_up', 'meeting', 'minutes', 'agenda',
+                           'allhands', 'all-hands', 'all_hands', 'retrospective', 'retro']
+        if ext not in business_skip_extensions and any(p in stem for p in meeting_patterns):
+            print(f"  ✓ Filename pattern: Meeting notes/template")
+            return ('business', 'meeting_notes', None, [])
 
         # Shipping labels
         if 'printlabel' in stem or 'print_label' in stem or 'shippinglabel' in stem:
