@@ -1353,6 +1353,7 @@ class ContentBasedFileOrganizer:
                 'financial': 'Organization',
                 'educational': 'Organization',
                 'nonprofit': 'Organization',
+                'meeting_notes': 'Organization',    # Gets Meeting Notes subfolder after company
                 'other': 'Organization'
             },
             # Person: root folder with person-named subfolders
@@ -1864,6 +1865,87 @@ class ContentBasedFileOrganizer:
         filename_lower = filename.lower()
         stem = file_path.stem.lower()
         ext = file_path.suffix.lower()
+        original_stem = file_path.stem
+
+        # =========================================================
+        # DUPLICATE DETECTION: Files with _YYYYMMDD_HHMMSS suffix
+        # These are timestamped copies - skip them
+        # =========================================================
+        if re.search(r'_\d{8}_\d{6}$', file_path.stem):
+            print(f"  ⚠ Duplicate file (timestamped copy) - skipping")
+            return ('skip', 'duplicate', None, [])
+
+        # =========================================================
+        # COMPANY MEETING NOTES: Must be before generic company patterns
+        # =========================================================
+        # Integrity Studio meeting notes (IntegrityWeeklyCadence-*-NotesByGemini.docx)
+        if 'integrityweeklycadence' in stem or ('integrity' in stem and 'cadence' in stem):
+            print(f"  ✓ Filename pattern: Integrity Studio meeting notes")
+            return ('organization', 'meeting_notes', 'Integrity Studio', [])
+
+        # =========================================================
+        # LEORA HOME HEALTH: Stock photos and business assets
+        # =========================================================
+        if ext in {'.jpg', '.jpeg', '.png', '.webp'}:
+            leora_keywords = ['elderlycare', 'caregiver', 'home-health', 'homehealth',
+                             'skilled-nursing', 'skillednursing', 'at-home-nurse',
+                             'compassionate-home', 'grandparents-and', 'get-started-seniors',
+                             'daughter-and-mother']
+            leora_prefixes = ['atx-caregiver', 'atx-nurse']
+            if any(kw in stem for kw in leora_keywords) or any(stem.startswith(p) for p in leora_prefixes):
+                print(f"  ✓ Filename pattern: Leora Home Health asset")
+                return ('organization', 'other', 'Leora Home Health', [])
+
+        # =========================================================
+        # COMPANY-BASED ORGANIZATION: Files with company names
+        # =========================================================
+        company_patterns = {
+            'integrity': ('organization', 'other', 'Integrity Studio'),
+            'integrityai': ('organization', 'other', 'Integrity Studio'),
+            'integritystudio': ('organization', 'other', 'Integrity Studio'),
+            'integrity_studio': ('organization', 'other', 'Integrity Studio'),
+            'integrity-studio': ('organization', 'other', 'Integrity Studio'),
+            'integritycrm': ('organization', 'other', 'Integrity Studio'),
+        }
+        for pattern, (category, subcategory, company_name) in company_patterns.items():
+            if pattern in stem:
+                print(f"  ✓ Filename pattern: Company file ({company_name})")
+                return (category, subcategory, company_name, [])
+
+        # =========================================================
+        # BUSINESS TYPE PATTERNS: CRM, HR, Operations, Planning
+        # =========================================================
+        # CRM files
+        if 'crm' in stem or 'contacts' in stem or 'microlender' in stem:
+            print(f"  ✓ Filename pattern: CRM/Contacts file")
+            return ('business', 'clients', None, [])
+
+        # HR/Job posting files
+        hr_patterns = ['jobposting', 'job_posting', 'job-posting', 'linkedin',
+                       'boardmember', 'board_member', 'application', 'hiring']
+        if any(p in stem for p in hr_patterns):
+            print(f"  ✓ Filename pattern: HR file")
+            return ('business', 'clients', None, [])
+
+        # Project tracking files
+        if 'projecttrack' in stem or 'project_track' in stem or 'project-track' in stem:
+            print(f"  ✓ Filename pattern: Project tracking")
+            return ('business', 'planning', None, [])
+
+        # Operations/Dashboard files
+        if 'dashboard' in stem or 'operations' in stem or 'toolkit' in stem:
+            print(f"  ✓ Filename pattern: Operations file")
+            return ('business', 'other', None, [])
+
+        # Stand-up/meeting templates
+        if 'standup' in stem or 'stand-up' in stem or 'stand_up' in stem:
+            print(f"  ✓ Filename pattern: Meeting template")
+            return ('business', 'other', None, [])
+
+        # Shipping labels
+        if 'printlabel' in stem or 'print_label' in stem or 'shippinglabel' in stem:
+            print(f"  ✓ Filename pattern: Shipping label")
+            return ('business', 'other', None, [])
 
         # =========================================================
         # GOOGLE INVOICES: 51xxxxx.pdf, 52xxxxx.pdf patterns
@@ -1976,7 +2058,6 @@ class ContentBasedFileOrganizer:
         # =========================================================
         legal_patterns = [
             ('agreement', 'contracts'),
-            ('cla', 'contracts'),
             ('operating', 'corporate'),
             ('reseller', 'contracts'),
             ('severance', 'contracts'),
@@ -1988,6 +2069,22 @@ class ContentBasedFileOrganizer:
             if pattern in stem:
                 print(f"  ✓ Filename pattern: Legal document ({pattern})")
                 return ('legal', subcat, None, [])
+
+        # CLA pattern - Contributor License Agreement
+        # Be careful not to match "class", "clause", "claw", "eucla" (timezone), etc.
+        # Only match explicit CLA patterns
+        cla_patterns = [
+            r'^cla[_\-\d.]',              # cla_signed, cla-2024, cla.pdf
+            r'^cla$',                      # just "cla"
+            r'corporatecla',               # CorporateCLA
+            r'individualcla',              # IndividualCLA
+            r'contributorcla',             # ContributorCLA
+            r'[_\-]cla[_\-\d.]',          # some_cla_file, my-cla-2024
+            r'[_\-]cla$',                  # some_cla, my-cla
+        ]
+        if any(re.search(p, stem) for p in cla_patterns):
+            print(f"  ✓ Filename pattern: Legal document (CLA)")
+            return ('legal', 'contracts', None, [])
 
         # =========================================================
         # BUSINESS DOCUMENTS: BizAid, BizStart, Meeting
@@ -2029,6 +2126,11 @@ class ContentBasedFileOrganizer:
             print(f"  ✓ Filename pattern: Specification document")
             return ('technical', 'documentation', None, [])
 
+        # CHANGELOG files
+        if stem.startswith('changelog') or stem == 'changes' or stem == 'history':
+            print(f"  ✓ Filename pattern: Changelog file")
+            return ('technical', 'documentation', None, [])
+
         # =========================================================
         # COVER LETTERS: Go to Person folder
         # =========================================================
@@ -2048,6 +2150,12 @@ class ContentBasedFileOrganizer:
         config_patterns = ['.manifest', '.config', '.ini', '.cfg', '.conf', '.plist']
         if ext in config_patterns:
             print(f"  ✓ Filename pattern: Config file ({ext})")
+            return ('technical', 'config', None, [])
+
+        # Config-like text files (settings.txt, config.txt, preferences.txt)
+        config_txt_names = ['settings', 'config', 'preferences', 'options', 'configuration']
+        if ext == '.txt' and stem in config_txt_names:
+            print(f"  ✓ Filename pattern: Config text file ({stem}.txt)")
             return ('technical', 'config', None, [])
 
         # =========================================================
@@ -2073,11 +2181,28 @@ class ContentBasedFileOrganizer:
                 return ('technical', 'config', None, [])
 
         # =========================================================
-        # SOURCE MAP FILES: .map → Technical
+        # SOURCE MAP FILES: .map, .js.map, .d.ts.map → Technical/Config
         # =========================================================
-        if ext == '.map':
+        if ext == '.map' or filename.endswith('.js.map') or filename.endswith('.d.ts.map'):
             print(f"  ✓ Filename pattern: Source map file")
-            return ('technical', 'other', None, [])
+            return ('technical', 'config', None, [])
+
+        # =========================================================
+        # MEETING NOTES: Generic meeting notes → Business/Other
+        # (Company-specific meeting notes handled earlier in COMPANY MEETING NOTES section)
+        # =========================================================
+        meeting_patterns = ['weeklynotes', 'weekly_notes', 'weekly-notes',
+                           'meetingnotes', 'meeting_notes', 'meeting-notes', 'notesby']
+        if any(p in stem for p in meeting_patterns):
+            print(f"  ✓ Filename pattern: Meeting notes")
+            return ('business', 'other', None, [])
+
+        # =========================================================
+        # DOCUMENTATION/NOTES FILES: Websites, personal notes
+        # =========================================================
+        if stem.startswith('websites') or 'ivemade' in stem or "i'vemade" in stem.replace("'", "'"):
+            print(f"  ✓ Filename pattern: Personal documentation")
+            return ('business', 'other', None, [])
 
         # =========================================================
         # AUDIO FILES: .wav, .ogg, .mp3, .flac, .aac → Media/Audio
@@ -2104,6 +2229,33 @@ class ContentBasedFileOrganizer:
             return ('game_assets', 'other', None, [])
 
         # =========================================================
+        # DIAGRAM/DOCUMENTATION IMAGES: *Diagram*, *ClassDiagram*
+        # =========================================================
+        if ext in {'.png', '.jpg', '.jpeg', '.webp', '.gif'}:
+            if 'diagram' in stem or 'classdiagram' in stem:
+                print(f"  ✓ Filename pattern: Diagram image")
+                return ('technical', 'documentation', None, [])
+
+        # =========================================================
+        # GAME ASSET SPRITES: claw_*, icon_class_*, icon_* prefixes
+        # =========================================================
+        if ext in {'.png', '.jpg', '.jpeg', '.webp', '.gif'}:
+            game_sprite_prefixes = ['claw_', 'icon_class_', 'icon_', 'sword_', 'shield_',
+                                   'armor_', 'weapon_', 'item_', 'enemy_', 'player_',
+                                   'tile_', 'bg_', 'effect_', 'spell_', 'skill_']
+            if any(stem.startswith(p) for p in game_sprite_prefixes):
+                print(f"  ✓ Filename pattern: Game sprite (prefix)")
+                return ('game_assets', 'sprites', None, [])
+            # Pattern: animation frames (2frame01.png, 3frame05.png)
+            if re.match(r'^\d+frame\d+$', stem):
+                print(f"  ✓ Filename pattern: Animation frame")
+                return ('game_assets', 'sprites', None, [])
+            # Pattern: BrogueFont files (BrogueFont1.png, etc.)
+            if re.match(r'^broguefont\d+$', stem):
+                print(f"  ✓ Filename pattern: Brogue font")
+                return ('game_assets', 'fonts', None, [])
+
+        # =========================================================
         # NUMBERED SPRITE FILES: 0.png, 103.png, 0_timestamp.png
         # Common pattern for game sprite sheets
         # =========================================================
@@ -2116,6 +2268,11 @@ class ContentBasedFileOrganizer:
             if re.match(r'^\d+(_\d+)*_\d{8}_\d{6}$', stem):
                 print(f"  ✓ Filename pattern: Numbered sprite (timestamped)")
                 return ('game_assets', 'sprites', None, [])
+            # Pattern: font-related files - check BEFORE generic sprite patterns
+            # (ascii_font.png, unicode_font.png, game_font.png, pixel_font.png)
+            if 'font' in stem or 'glyph' in stem or 'charset' in stem:
+                print(f"  ✓ Filename pattern: Font asset")
+                return ('game_assets', 'fonts', None, [])
             # Pattern: name_hash.png (animal_57886bff.png, drop_2_6.png)
             if re.match(r'^[a-z]+(_[a-z0-9]+)+$', stem):
                 print(f"  ✓ Filename pattern: Game asset (named)")
@@ -2152,6 +2309,10 @@ class ContentBasedFileOrganizer:
             # Pattern: font-size files (courier-16.png, cp437-14_1.png, fantasy-16s.png)
             if re.match(r'^[a-z0-9]+-\d+[a-z]?(_\d+)?$', stem):
                 print(f"  ✓ Filename pattern: Font/glyph file")
+                return ('game_assets', 'fonts', None, [])
+            # Pattern: codepage/charset font files (cp437-wide.png, cp437_wide_1.png, cp850-thin.png)
+            if re.match(r'^cp\d+[_\-]', stem) or re.match(r'^(ascii|unicode|charset|codepage)[_\-]', stem):
+                print(f"  ✓ Filename pattern: Codepage font file")
                 return ('game_assets', 'fonts', None, [])
             # Pattern: mixed case hash/ID (fSpW8I2Dxe6.png)
             if re.match(r'^[a-zA-Z0-9]{8,}$', stem) and not stem.isdigit() and not stem.isalpha():
@@ -2199,12 +2360,16 @@ class ContentBasedFileOrganizer:
                 return ('media', 'photos_other', None, [])
 
         # =========================================================
-        # ICON FILES: .ico, .icns → Media/Other (icons)
+        # ICON FILES: .ico → Technical/Config, .icns → GameAssets/Other
         # =========================================================
-        icon_extensions = {'.ico', '.icns'}
-        if ext in icon_extensions:
-            print(f"  ✓ Filename pattern: Icon file ({ext})")
-            return ('creative', 'other', None, [])
+        # favicon.ico and other .ico files are typically web config
+        if ext == '.ico':
+            print(f"  ✓ Filename pattern: Icon file ({stem}.ico) → Technical/Config")
+            return ('technical', 'config', None, [])
+        # .icns files are Mac app icons, often game-related
+        if ext == '.icns':
+            print(f"  ✓ Filename pattern: Mac icon file ({stem}.icns) → GameAssets/Other")
+            return ('game_assets', 'other', None, [])
 
         # =========================================================
         # ARCHIVE FILES: .zip, .tar, .gz, .rar → Technical/Archives
@@ -2335,6 +2500,13 @@ class ContentBasedFileOrganizer:
             return ('person', 'travel', None, [])
 
         # =========================================================
+        # ORGANIZATION EVENTS: Zouk/Fisterra events
+        # =========================================================
+        if 'zouk' in stem:
+            print(f"  ✓ Filename pattern: Fisterra/Zouk event")
+            return ('organization', 'other', 'Fisterra', [])
+
+        # =========================================================
         # EVENT DOCUMENTS: Oct25Event, Nov15Party (month+day in name)
         # =========================================================
         month_patterns = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
@@ -2343,6 +2515,16 @@ class ContentBasedFileOrganizer:
                 if month in stem and re.search(r'\d{1,2}', stem):
                     print(f"  ✓ Filename pattern: Event document")
                     return ('person', 'events', None, [])
+
+        # =========================================================
+        # JOURNAL ENTRIES: Dream, Diary, Thoughts, Reflections
+        # =========================================================
+        journal_keywords = ['dream', 'diary', 'journal', 'thoughts', 'reflection',
+                           'memoir', 'nightbefore', 'morningafter', 'dayof']
+        if ext in {'.docx', '.doc', '.txt', '.md'}:
+            if any(kw in stem for kw in journal_keywords):
+                print(f"  ✓ Filename pattern: Journal entry")
+                return ('person', 'other', None, [])
 
         # =========================================================
         # PERSONAL DOCUMENTS: Short name + version (Sumedh3.docx)
@@ -2532,6 +2714,9 @@ class ContentBasedFileOrganizer:
         filename_result = self.classify_by_filename_patterns(file_path)
         if filename_result:
             category, subcategory, company_name, people_names = filename_result
+            # Handle skip category for duplicates
+            if category == 'skip':
+                return ('skip', subcategory, schema_type, '', None, [], {})
             return (category, subcategory, schema_type, '', company_name, people_names, {})
 
         # PRIORITY 1: Organization and Person detection for document-type files
@@ -2754,6 +2939,9 @@ class ContentBasedFileOrganizer:
                 if subcategory == 'clients':
                     # Clients get nested: Organization/Clients/{OrgName}/
                     relative_path = f"{relative_path}/{sanitized_company}"
+                elif subcategory == 'meeting_notes':
+                    # Meeting notes get nested: Organization/{OrgName}/Meeting Notes/
+                    relative_path = f"{relative_path}/{sanitized_company}/Meeting Notes"
                 else:
                     # All other org types: Organization/{OrgName}/
                     relative_path = f"{relative_path}/{sanitized_company}"
@@ -2958,6 +3146,13 @@ class ContentBasedFileOrganizer:
             result['company_name'] = company_name
             result['people_names'] = people_names
             result['image_metadata'] = image_metadata
+
+            # Handle skip category (duplicates, etc.)
+            if category == 'skip':
+                result['status'] = 'skipped'
+                result['reason'] = subcategory  # e.g., 'duplicate'
+                self.stats['skipped'] += 1
+                return result
 
             # Generate schema with extracted content
             schema = self.generate_schema(file_path, schema_type, extracted_text)
