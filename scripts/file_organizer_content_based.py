@@ -2491,6 +2491,16 @@ class ContentBasedFileOrganizer:
             if re.match(r'^cp\d+[_\-]', stem) or re.match(r'^(ascii|unicode|charset|codepage)[_\-]', stem):
                 print(f"  ✓ Filename pattern: Codepage font file")
                 return ('game_assets', 'fonts', None, [])
+            # Pattern: game asset keywords with numbers (dungeon2, kitchen4, lightning1, interface2)
+            # These are common game environment/effect/UI asset names
+            game_asset_keywords = ['dungeon', 'kitchen', 'lightning', 'interface', 'items',
+                                   'terinyo', 'castle', 'forest', 'cave', 'temple', 'tower',
+                                   'weapon', 'armor', 'potion', 'scroll', 'effect', 'particle',
+                                   'enemy', 'monster', 'creature', 'npc', 'player', 'character']
+            for keyword in game_asset_keywords:
+                if stem.startswith(keyword) and re.match(rf'^{keyword}\d+$', stem):
+                    print(f"  ✓ Filename pattern: Game asset ({keyword})")
+                    return ('game_assets', 'sprites', None, [])
             # Pattern: mixed case hash/ID (fSpW8I2Dxe6.png)
             if re.match(r'^[a-zA-Z0-9]{8,}$', stem) and not stem.isdigit() and not stem.isalpha():
                 print(f"  ✓ Filename pattern: Hash/ID image")
