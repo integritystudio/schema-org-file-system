@@ -1400,6 +1400,10 @@ class ContentBasedFileOrganizer:
                     'events': 'Media/Photos/Events',
                     'documents': 'Media/Photos/Documents',
                     'social': 'Media/Photos/Social',
+                    'chatgpt': 'Media/Photos/ChatGPT',
+                    'facebook': 'Media/Photos/Facebook',
+                    'logos': 'Media/Photos/Logos',
+                    'stock': 'Media/Photos/Stock',
                     'other': 'Media/Photos/Other'
                 },
                 'videos': {
@@ -2465,8 +2469,20 @@ class ContentBasedFileOrganizer:
                 return ('game_assets', 'sprites', None, [])
             # Pattern: ChatGPT images (ChatGPTImageNov1,2025,01_49_23AM.png)
             if stem.startswith('chatgptimage'):
-                print(f"  ✓ Filename pattern: AI-generated image")
-                return ('media', 'photos_other', None, [])
+                print(f"  ✓ Filename pattern: ChatGPT AI-generated image")
+                return ('media', 'photos_chatgpt', None, [])
+            # Pattern: Facebook images (481566579_10162021550590804_5823185318886800843_n.png)
+            if re.match(r'^\d+_\d+_\d+_n$', stem):
+                print(f"  ✓ Filename pattern: Facebook image")
+                return ('media', 'photos_facebook', None, [])
+            # Pattern: Logo images (logo-..., logotype-..., *-logo.png)
+            if 'logo' in stem or 'logotype' in stem:
+                print(f"  ✓ Filename pattern: Logo image")
+                return ('media', 'photos_logos', None, [])
+            # Pattern: Leora Home Health stock photos (LHH-OG-*, nurse-*, medical-*)
+            if stem.startswith('lhh-') or stem.startswith('lhh_'):
+                print(f"  ✓ Filename pattern: Leora Home Health asset")
+                return ('organization', 'healthcare', 'Leora Home Health', [])
             # Pattern: font-size files (courier-16.png, cp437-14_1.png, fantasy-16s.png)
             if re.match(r'^[a-z0-9]+-\d+[a-z]?(_\d+)?$', stem):
                 print(f"  ✓ Filename pattern: Font/glyph file")
@@ -2479,10 +2495,19 @@ class ContentBasedFileOrganizer:
             if re.match(r'^[a-zA-Z0-9]{8,}$', stem) and not stem.isdigit() and not stem.isalpha():
                 print(f"  ✓ Filename pattern: Hash/ID image")
                 return ('media', 'photos_other', None, [])
-            # Pattern: hyphenated long names (stock photos)
+            # Pattern: portrait/headshot photos (Name-p-800.jpg, Monica-p-1080.png)
+            # Single capitalized word with -p-size suffix - typically named portrait photos
+            if re.match(r'^[A-Z][a-z]+-p-\d+$', file_path.stem):  # Use original stem for case
+                print(f"  ✓ Filename pattern: Portrait photo")
+                return ('media', 'photos_portraits', None, [])
+            # Pattern: hyphenated long names (stock photos with -p-500/-800/-1080 suffix)
+            if re.match(r'^[a-z]+-[a-z]+-[a-z]+.*-p-\d+$', stem):
+                print(f"  ✓ Filename pattern: Stock photo")
+                return ('media', 'photos_stock', None, [])
+            # Pattern: hyphenated long names without -p- suffix (general descriptive names)
             if re.match(r'^[a-z]+-[a-z]+-[a-z]+.*-\d+$', stem):
                 print(f"  ✓ Filename pattern: Stock photo")
-                return ('media', 'photos_other', None, [])
+                return ('media', 'photos_stock', None, [])
             # Pattern: word_word (airbnb_earnings, austin_to_bombay)
             if re.match(r'^[a-z]+(_[a-z]+)+$', stem) and '_' in stem:
                 print(f"  ✓ Filename pattern: Named image")
