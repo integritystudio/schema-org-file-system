@@ -1299,6 +1299,7 @@ class ContentBasedFileOrganizer:
                 'planning': 'Business/Planning',
                 'marketing': 'Business/Marketing',
                 'proposals': 'Business/Proposals',
+                'presentations': 'Business/Presentations',
                 'clients': 'Business/Clients',  # Will be further organized by company name
                 'other': 'Business/Other'
             },
@@ -1328,6 +1329,8 @@ class ContentBasedFileOrganizer:
             'technical': {
                 'documentation': 'Technical/Documentation',
                 'architecture': 'Technical/Architecture',
+                'config': 'Technical/Config',
+                'data': 'Technical/Data',
                 'other': 'Technical/Other'
             },
             'creative': {
@@ -1360,6 +1363,8 @@ class ContentBasedFileOrganizer:
                 'clients': 'Person',
                 'family': 'Person',
                 'references': 'Person',
+                'travel': 'Person/Travel',
+                'events': 'Person/Events',
                 'other': 'Person'
             },
             'game_assets': {
@@ -1397,7 +1402,13 @@ class ContentBasedFileOrganizer:
                     'music': 'Media/Audio/Music',
                     'podcasts': 'Media/Audio/Podcasts',
                     'other': 'Media/Audio/Other'
-                }
+                },
+                'graphics': {
+                    'vector': 'Media/Graphics/Vector',
+                    'icons': 'Media/Graphics/Icons',
+                    'other': 'Media/Graphics/Other'
+                },
+                'other': 'Media/Other'
             },
             'uncategorized': 'Uncategorized'
         }
@@ -1431,6 +1442,9 @@ class ContentBasedFileOrganizer:
             'frame', 'item', 'segment', 'sprite', 'texture', 'tile',
             'leg', 'arm', 'head', 'torso', 'body', 'wing', 'tail',
             'hair', 'face', 'eye', 'mouth', 'hand', 'foot',
+            # Character customization sprites
+            'beard', 'bling', 'hiero', 'mustache', 'scar', 'tattoo',
+            'earring', 'necklace', 'bracelet', 'glasses', 'mask', 'hood',
             'wall', 'floor', 'ceiling', 'door', 'window', 'stairs',
             'tree', 'rock', 'grass', 'water', 'lava', 'cloud',
             'sword', 'shield', 'armor', 'helmet', 'boot', 'glove',
@@ -1613,7 +1627,10 @@ class ContentBasedFileOrganizer:
                         'frame', 'sprite', 'leg', 'arm', 'head', 'torso', 'body',
                         'wing', 'hair', 'face', 'mouth', '_grey', '_gray',
                         'assassins', 'atonement', 'arrow_v', 'arrow_h', 'add',
-                        '2h_', '1h_', 'dagger', 'sword', 'axe', 'hammer', 'mace'
+                        '2h_', '1h_', 'dagger', 'sword', 'axe', 'hammer', 'mace',
+                        # Character customization
+                        'beard', 'bling', 'hiero', 'mustache', 'scar', 'tattoo',
+                        'earring', 'necklace', 'bracelet', 'glasses', 'mask', 'hood'
                     ]
                     if any(kw in stem or kw in clean_stem for kw in sprite_keywords):
                         return ('game_assets', 'sprites')
@@ -1833,6 +1850,524 @@ class ContentBasedFileOrganizer:
 
         return None
 
+    def classify_by_filename_patterns(self, file_path: Path) -> Optional[Tuple[str, str, Optional[str], List[str]]]:
+        """
+        Classify file based on filename patterns before content extraction.
+
+        This method handles common patterns that can be quickly identified
+        by filename alone, avoiding expensive OCR/content analysis.
+
+        Returns:
+            Tuple of (category, subcategory, company_name, people_names) or None
+        """
+        filename = file_path.name
+        filename_lower = filename.lower()
+        stem = file_path.stem.lower()
+        ext = file_path.suffix.lower()
+
+        # =========================================================
+        # GOOGLE INVOICES: 51xxxxx.pdf, 52xxxxx.pdf patterns
+        # =========================================================
+        if ext == '.pdf' and re.match(r'^5[12]\d{8,}', filename):
+            print(f"  ✓ Filename pattern: Google invoice")
+            return ('organization', 'vendors', 'Google', [])
+
+        # Known person name patterns (used in multiple places)
+        known_person_patterns = {
+            'ledlie': 'Alyshia Ledlie',
+            'alyshia': 'Alyshia Ledlie',
+        }
+
+        # =========================================================
+        # RESUME FILES: *resume*, *cv* - ONLY for document file types
+        # Code files (.py, .js, .ts, .css) with "resume" are technical files
+        # =========================================================
+        document_extensions = {'.pdf', '.docx', '.doc', '.rtf', '.odt', '.txt'}
+        code_extensions = {'.py', '.js', '.ts', '.jsx', '.tsx', '.css', '.scss', '.less', '.html', '.htm'}
+
+        resume_patterns = ['resume', 'curriculum_vitae', 'curriculum-vitae']
+        # Only match 'cv' if it's the whole filename or clearly a CV document (not in middle of hash)
+        is_cv_document = (stem == 'cv' or stem.startswith('cv_') or stem.startswith('cv-') or
+                         '_cv' in stem or '-cv' in stem or stem.endswith('_cv') or stem.endswith('-cv'))
+
+        if ext in document_extensions and (any(p in filename_lower for p in resume_patterns) or is_cv_document):
+            # Try to extract person name from filename
+            person_name = None
+            # Pattern: FirstName_LastName_Resume or Resume_FirstName_LastName
+            name_match = re.search(r'([A-Z][a-z]+)[_\-\s]+([A-Z][a-z]+)[_\-\s]+(resume|cv)', filename, re.IGNORECASE)
+            if name_match:
+                person_name = f"{name_match.group(1)} {name_match.group(2)}"
+            else:
+                # Try reverse: resume_FirstName_LastName
+                name_match = re.search(r'(resume|cv)[_\-\s]+([A-Z][a-z]+)[_\-\s]+([A-Z][a-z]+)', filename, re.IGNORECASE)
+                if name_match:
+                    person_name = f"{name_match.group(2)} {name_match.group(3)}"
+
+            # Check for known person names if no name extracted yet
+            if not person_name:
+                for pattern, known_name in known_person_patterns.items():
+                    if pattern in filename_lower:
+                        person_name = known_name
+                        break
+
+            print(f"  ✓ Filename pattern: Resume" + (f" ({person_name})" if person_name else ""))
+            return ('person', 'contacts', None, [person_name] if person_name else [])
+
+        # Check for known person names in filename (e.g., ledlie) - non-resume files
+        for pattern, person_name in known_person_patterns.items():
+            if pattern in filename_lower:
+                print(f"  ✓ Filename pattern: Person ({person_name})")
+                return ('person', 'contacts', None, [person_name])
+
+        # =========================================================
+        # ENTITY-BASED FILES: Company names in filename (check BEFORE extension)
+        # This ensures files like LeoraHomeHealth-Data.csv go to Organization/
+        # rather than Technical/
+        # =========================================================
+        entity_patterns = {
+            'integritystudio': ('organization', 'vendors', 'Integrity Studio'),
+            'integrity_studio': ('organization', 'vendors', 'Integrity Studio'),
+            'integrity-studio': ('organization', 'vendors', 'Integrity Studio'),
+            'leora': ('organization', 'healthcare', 'Leora Home Health'),
+            'leorahomehealth': ('organization', 'healthcare', 'Leora Home Health'),
+            'ltchcssa': ('organization', 'healthcare', 'Leora Home Health'),  # LTCHCSSA is Leora related
+            'inspiredmovement': ('organization', 'vendors', 'Inspired Movement'),
+            'inspired_movement': ('organization', 'vendors', 'Inspired Movement'),
+            'inspired-movement': ('organization', 'vendors', 'Inspired Movement'),
+            'fisterra': ('organization', 'vendors', 'Fisterra'),
+            'dotfun': ('organization', 'vendors', 'DotFun'),
+            'ensco': ('organization', 'vendors', 'EnsoCo'),
+            'google': ('organization', 'vendors', 'Google'),
+            'microsoft': ('organization', 'vendors', 'Microsoft'),
+            'adobe': ('organization', 'vendors', 'Adobe Systems'),
+            'amazon': ('organization', 'vendors', 'Amazon'),
+            'apple': ('organization', 'vendors', 'Apple'),
+        }
+        for pattern, (category, subcat, company_name) in entity_patterns.items():
+            if pattern in stem:
+                print(f"  ✓ Filename pattern: Entity ({company_name})")
+                return (category, subcat, company_name, [])
+
+        # =========================================================
+        # TECHNICAL FILES: .py, .js, .ts, .csv, .json, .xml
+        # (Only if no entity pattern matched above)
+        # =========================================================
+        technical_extensions = {
+            '.py': 'Technical',
+            '.js': 'Technical',
+            '.ts': 'Technical',
+            '.jsx': 'Technical',
+            '.tsx': 'Technical',
+            '.csv': 'Technical',
+            '.json': 'Technical',
+            '.xml': 'Technical',
+            '.yaml': 'Technical',
+            '.yml': 'Technical',
+            '.sql': 'Technical',
+            '.sh': 'Technical',
+            '.bash': 'Technical',
+        }
+        if ext in technical_extensions:
+            print(f"  ✓ Filename pattern: Technical file ({ext})")
+            return ('technical', 'other', None, [])
+
+        # =========================================================
+        # LEGAL DOCUMENTS: Agreement, CLA, Operating, Reseller, Severance
+        # =========================================================
+        legal_patterns = [
+            ('agreement', 'contracts'),
+            ('cla', 'contracts'),
+            ('operating', 'corporate'),
+            ('reseller', 'contracts'),
+            ('severance', 'contracts'),
+            ('contract', 'contracts'),
+            ('amendment', 'contracts'),
+            ('certificateoffiling', 'corporate'),
+        ]
+        for pattern, subcat in legal_patterns:
+            if pattern in stem:
+                print(f"  ✓ Filename pattern: Legal document ({pattern})")
+                return ('legal', subcat, None, [])
+
+        # =========================================================
+        # BUSINESS DOCUMENTS: BizAid, BizStart, Meeting
+        # =========================================================
+        business_patterns = [
+            ('bizaid', 'planning'),
+            ('bizstart', 'planning'),
+            ('meeting', 'other'),
+            ('proposal', 'proposals'),
+        ]
+        for pattern, subcat in business_patterns:
+            if pattern in stem:
+                print(f"  ✓ Filename pattern: Business document ({pattern})")
+                return ('business', subcat, None, [])
+
+        # =========================================================
+        # DATA USAGE AGREEMENTS: Special case
+        # =========================================================
+        if 'datausageagreement' in stem or 'data_usage_agreement' in stem or 'data-usage-agreement' in stem:
+            print(f"  ✓ Filename pattern: Data Usage Agreement")
+            return ('legal', 'contracts', None, [])
+
+        # =========================================================
+        # DOCUMENTATION FILES: LICENSE, README, specs
+        # =========================================================
+        # LICENSE files
+        if stem.startswith('license') or stem == 'copying' or stem == 'licence':
+            print(f"  ✓ Filename pattern: License file")
+            return ('technical', 'documentation', None, [])
+
+        # README files
+        if stem.startswith('readme') or stem == 'read_me' or stem == 'read-me':
+            print(f"  ✓ Filename pattern: README file")
+            return ('technical', 'documentation', None, [])
+
+        # Specification/spec documents
+        spec_patterns = ['specification', 'spec_', '_spec', '-spec', 'specs_', '_specs']
+        if any(p in stem for p in spec_patterns) or stem == 'spec' or stem == 'specs':
+            print(f"  ✓ Filename pattern: Specification document")
+            return ('technical', 'documentation', None, [])
+
+        # =========================================================
+        # COVER LETTERS: Go to Person folder
+        # =========================================================
+        if 'coverletter' in stem or 'cover_letter' in stem or 'cover-letter' in stem:
+            # Try to extract person name
+            person_name = None
+            for pattern, known_name in known_person_patterns.items():
+                if pattern in filename_lower:
+                    person_name = known_name
+                    break
+            print(f"  ✓ Filename pattern: Cover letter" + (f" ({person_name})" if person_name else ""))
+            return ('person', 'contacts', None, [person_name] if person_name else [])
+
+        # =========================================================
+        # CONFIG/MANIFEST FILES: Technical config
+        # =========================================================
+        config_patterns = ['.manifest', '.config', '.ini', '.cfg', '.conf', '.plist']
+        if ext in config_patterns:
+            print(f"  ✓ Filename pattern: Config file ({ext})")
+            return ('technical', 'config', None, [])
+
+        # =========================================================
+        # GIT HOOK SAMPLES: .sample files from .git/hooks/
+        # =========================================================
+        if ext == '.sample':
+            print(f"  ✓ Filename pattern: Git hook sample")
+            return ('technical', 'config', None, [])
+
+        # =========================================================
+        # DOTFILES: .eslintrc, .editorconfig, .nycrc, .travis.yml, etc.
+        # =========================================================
+        if filename.startswith('.'):
+            dotfile_configs = ['.eslintrc', '.editorconfig', '.nycrc', '.travis', '.codecov',
+                              '.codeclimate', '.yarnrc', '.npmrc', '.prettierrc', '.babelrc',
+                              '.gitignore', '.gitattributes', '.dockerignore', '.env']
+            if any(filename.startswith(cfg) for cfg in dotfile_configs):
+                print(f"  ✓ Filename pattern: Dotfile config ({filename})")
+                return ('technical', 'config', None, [])
+            # Generic dotfiles with common config extensions
+            if ext in ['.yml', '.yaml', '.json', '.toml']:
+                print(f"  ✓ Filename pattern: Dotfile config ({filename})")
+                return ('technical', 'config', None, [])
+
+        # =========================================================
+        # SOURCE MAP FILES: .map → Technical
+        # =========================================================
+        if ext == '.map':
+            print(f"  ✓ Filename pattern: Source map file")
+            return ('technical', 'other', None, [])
+
+        # =========================================================
+        # AUDIO FILES: .wav, .ogg, .mp3, .flac, .aac → Media/Audio
+        # =========================================================
+        audio_extensions = {'.wav', '.ogg', '.mp3', '.flac', '.aac', '.m4a', '.wma'}
+        if ext in audio_extensions:
+            print(f"  ✓ Filename pattern: Audio file ({ext})")
+            return ('media', 'audio_other', None, [])
+
+        # =========================================================
+        # VECTOR GRAPHICS: .svg, .ai, .eps → Media/Graphics
+        # =========================================================
+        vector_extensions = {'.svg', '.ai', '.eps'}
+        if ext in vector_extensions:
+            print(f"  ✓ Filename pattern: Vector graphics ({ext})")
+            return ('media', 'graphics_vector', None, [])
+
+        # =========================================================
+        # GAME DATA FILES: .noe (ADOM game data), etc → GameAssets
+        # =========================================================
+        game_data_extensions = {'.noe'}
+        if ext in game_data_extensions:
+            print(f"  ✓ Filename pattern: Game data file ({ext})")
+            return ('game_assets', 'other', None, [])
+
+        # =========================================================
+        # NUMBERED SPRITE FILES: 0.png, 103.png, 0_timestamp.png
+        # Common pattern for game sprite sheets
+        # =========================================================
+        if ext in {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.jp2'}:
+            # Pattern: purely numeric filename (0.png, 103.png, 42_8.png)
+            if re.match(r'^\d+(_\d+)*$', stem):
+                print(f"  ✓ Filename pattern: Numbered sprite")
+                return ('game_assets', 'sprites', None, [])
+            # Pattern: numeric with timestamp suffix (103_20251120_164958.png)
+            if re.match(r'^\d+(_\d+)*_\d{8}_\d{6}$', stem):
+                print(f"  ✓ Filename pattern: Numbered sprite (timestamped)")
+                return ('game_assets', 'sprites', None, [])
+            # Pattern: name_hash.png (animal_57886bff.png, drop_2_6.png)
+            if re.match(r'^[a-z]+(_[a-z0-9]+)+$', stem):
+                print(f"  ✓ Filename pattern: Game asset (named)")
+                return ('game_assets', 'sprites', None, [])
+            # Pattern: _hash or _name (starts with underscore, like _RWOIsUgWGL.png)
+            if re.match(r'^_[A-Za-z0-9]+(_\d{8}_\d{6})?$', stem):
+                print(f"  ✓ Filename pattern: Game asset (underscore prefix)")
+                return ('game_assets', 'sprites', None, [])
+            # Pattern: number_word (17_in.png, 17_out_1.png)
+            if re.match(r'^\d+_[a-z]+(_\d+)?$', stem):
+                print(f"  ✓ Filename pattern: Game asset (numbered)")
+                return ('game_assets', 'sprites', None, [])
+            # Pattern: hex codes for emoji/unicode (1f4a8.png, 1f600.png)
+            if re.match(r'^[0-9a-f]{4,8}$', stem):
+                print(f"  ✓ Filename pattern: Emoji/unicode asset")
+                return ('game_assets', 'sprites', None, [])
+            # Pattern: date_category[_status]_id (ML training data)
+            # Matches: 20190129_art_uncertain_100453.png, 20190129_pet_100453_1.png
+            if re.match(r'^\d{8}_[a-z]+(_[a-z]+)?_\d+(_\d+)*$', stem):
+                print(f"  ✓ Filename pattern: ML training data")
+                return ('game_assets', 'sprites', None, [])
+            # Pattern: Facebook photo (481566579_10162021550590804_5823185318886800843_n.png)
+            if re.match(r'^\d+_\d+_\d+_n$', stem):
+                print(f"  ✓ Filename pattern: Social media photo")
+                return ('media', 'photos_social', None, [])
+            # Pattern: single word lowercase (achiever.png, sword.png)
+            if re.match(r'^[a-z]+$', stem) and len(stem) > 2:
+                print(f"  ✓ Filename pattern: Game asset (single word)")
+                return ('game_assets', 'sprites', None, [])
+            # Pattern: ChatGPT images (ChatGPTImageNov1,2025,01_49_23AM.png)
+            if stem.startswith('chatgptimage'):
+                print(f"  ✓ Filename pattern: AI-generated image")
+                return ('media', 'photos_other', None, [])
+            # Pattern: font-size files (courier-16.png, cp437-14_1.png, fantasy-16s.png)
+            if re.match(r'^[a-z0-9]+-\d+[a-z]?(_\d+)?$', stem):
+                print(f"  ✓ Filename pattern: Font/glyph file")
+                return ('game_assets', 'fonts', None, [])
+            # Pattern: mixed case hash/ID (fSpW8I2Dxe6.png)
+            if re.match(r'^[a-zA-Z0-9]{8,}$', stem) and not stem.isdigit() and not stem.isalpha():
+                print(f"  ✓ Filename pattern: Hash/ID image")
+                return ('media', 'photos_other', None, [])
+            # Pattern: hyphenated long names (stock photos)
+            if re.match(r'^[a-z]+-[a-z]+-[a-z]+.*-\d+$', stem):
+                print(f"  ✓ Filename pattern: Stock photo")
+                return ('media', 'photos_other', None, [])
+            # Pattern: word_word (airbnb_earnings, austin_to_bombay)
+            if re.match(r'^[a-z]+(_[a-z]+)+$', stem) and '_' in stem:
+                print(f"  ✓ Filename pattern: Named image")
+                return ('media', 'photos_other', None, [])
+            # Pattern: letter+number sprites (l10.png, l20_1.png, note01.png, img1.png)
+            if re.match(r'^[a-z]+\d+(_\d+)?$', stem):
+                print(f"  ✓ Filename pattern: Sprite sequence")
+                return ('game_assets', 'sprites', None, [])
+            # Pattern: word+number (drake2.png, grave2.png, void2.png)
+            if re.match(r'^[a-z]+\d$', stem):
+                print(f"  ✓ Filename pattern: Numbered variant")
+                return ('game_assets', 'sprites', None, [])
+            # Pattern: hyphenated names (heart-beat.png, phone-call.png)
+            if re.match(r'^[a-z]+-[a-z]+(-[a-z]+)*(_\d{8}_\d{6})?(-copy)?$', stem):
+                print(f"  ✓ Filename pattern: Hyphenated asset")
+                return ('game_assets', 'sprites', None, [])
+            # Pattern: two letters (dv.png, pv.png)
+            if re.match(r'^[a-z]{2}$', stem):
+                print(f"  ✓ Filename pattern: Two-letter asset")
+                return ('game_assets', 'sprites', None, [])
+            # Pattern: tinyfont/font with numbers (tinyfont66_1.png)
+            if re.match(r'^[a-z]+font\d+(_\d+)?$', stem):
+                print(f"  ✓ Filename pattern: Font sprite")
+                return ('game_assets', 'fonts', None, [])
+            # Pattern: repository templates
+            if 'repository' in stem or 'template' in stem:
+                print(f"  ✓ Filename pattern: Template image")
+                return ('technical', 'other', None, [])
+            # Pattern: requests-logo type (word-word.png)
+            if re.match(r'^[a-z]+-[a-z]+(-compressed)?$', stem):
+                print(f"  ✓ Filename pattern: Logo/brand image")
+                return ('media', 'photos_other', None, [])
+            # Pattern: hash ID with prefix (rs=xxx, shirt-xxx)
+            if '=' in stem or re.match(r'^[a-z]+-\d+-[a-z0-9]+', stem):
+                print(f"  ✓ Filename pattern: Generated ID image")
+                return ('media', 'photos_other', None, [])
+
+        # =========================================================
+        # ICON FILES: .ico, .icns → Media/Other (icons)
+        # =========================================================
+        icon_extensions = {'.ico', '.icns'}
+        if ext in icon_extensions:
+            print(f"  ✓ Filename pattern: Icon file ({ext})")
+            return ('creative', 'other', None, [])
+
+        # =========================================================
+        # ARCHIVE FILES: .zip, .tar, .gz, .rar → Technical/Archives
+        # =========================================================
+        archive_extensions = {'.zip', '.tar', '.gz', '.rar', '.7z', '.bz2'}
+        if ext in archive_extensions:
+            print(f"  ✓ Filename pattern: Archive file ({ext})")
+            return ('technical', 'archives', None, [])
+
+        # =========================================================
+        # CERTIFICATE/KEY FILES: .pem, .crt, .key → Technical/Security
+        # =========================================================
+        cert_extensions = {'.pem', '.crt', '.key', '.cer', '.p12', '.pfx'}
+        if ext in cert_extensions:
+            print(f"  ✓ Filename pattern: Certificate/key file ({ext})")
+            return ('technical', 'security', None, [])
+
+        # =========================================================
+        # TEMPLATE FILES: .tpl → Technical/Templates
+        # =========================================================
+        if ext == '.tpl':
+            print(f"  ✓ Filename pattern: Template file")
+            return ('technical', 'templates', None, [])
+
+        # =========================================================
+        # FILES WITHOUT EXTENSION: Likely system/timezone data
+        # =========================================================
+        if not ext:
+            # City/location names (timezone data): Abidjan, Accra, Adelaide, BajaNorte
+            if re.match(r'^[A-Z][a-zA-Z-]+$', filename):
+                print(f"  ✓ Filename pattern: Timezone/system data")
+                return ('technical', 'other', None, [])
+            # ALL CAPS names or with underscores (system data): ACT, ADOM, ADOM_1
+            if re.match(r'^[A-Z][A-Z0-9_]+$', filename):
+                print(f"  ✓ Filename pattern: System data")
+                return ('technical', 'other', None, [])
+            # Numeric IDs (social media): 2242610712719705
+            if re.match(r'^\d{10,}$', filename):
+                print(f"  ✓ Filename pattern: Numeric ID file")
+                return ('technical', 'other', None, [])
+            # Hash strings: 93419027627913a58f0b3fbb9ba9decea2a6bb
+            if re.match(r'^[0-9a-f]{20,}$', filename):
+                print(f"  ✓ Filename pattern: Hash file")
+                return ('technical', 'other', None, [])
+            # Script/tool names: activate-global-python-argcomplete
+            if re.match(r'^[a-z]+(-[a-z]+)+$', filename):
+                print(f"  ✓ Filename pattern: Script/tool")
+                return ('technical', 'other', None, [])
+            # CamelCase system files: CodeDirectory, CodeResources
+            if re.match(r'^[A-Z][a-z]+[A-Z][a-zA-Z0-9-]*$', filename):
+                print(f"  ✓ Filename pattern: macOS system file")
+                return ('technical', 'other', None, [])
+            # Lowercase with underscore and number: tsserver_1, bq
+            if re.match(r'^[a-z]+(_\d+)?$', filename):
+                print(f"  ✓ Filename pattern: System tool")
+                return ('technical', 'other', None, [])
+            # GMT timezones: GMT-0, GMT-1, GMT+5
+            if re.match(r'^(GMT|UTC)[+-]?\d+$', filename):
+                print(f"  ✓ Filename pattern: Timezone data")
+                return ('technical', 'other', None, [])
+            # ChangeLog files with timestamp: ChangeLog_20251210_203502
+            if filename.startswith('ChangeLog'):
+                print(f"  ✓ Filename pattern: ChangeLog")
+                return ('technical', 'documentation', None, [])
+            # Tool with hyphen and alphanumeric: gcloud-crc32c, css2
+            if re.match(r'^[a-z]+-?[a-z0-9]+$', filename):
+                print(f"  ✓ Filename pattern: System utility")
+                return ('technical', 'other', None, [])
+            # Query parameter style: m=b, m=core, m=RsR2Mc
+            if re.match(r'^[a-z]=[a-zA-Z0-9]+$', filename):
+                print(f"  ✓ Filename pattern: Query param file")
+                return ('technical', 'other', None, [])
+            # Makefile patterns: Makefile, Makefile_timestamp
+            if filename.startswith('Makefile'):
+                print(f"  ✓ Filename pattern: Makefile")
+                return ('technical', 'other', None, [])
+            # iframe_api, node-which_1 style
+            if re.match(r'^[a-z]+[_-][a-z0-9]+(_\d+)?$', filename):
+                print(f"  ✓ Filename pattern: System file")
+                return ('technical', 'other', None, [])
+            # City names with underscore: Rio_Gallegos
+            if re.match(r'^[A-Z][a-z]+_[A-Z][a-z]+$', filename):
+                print(f"  ✓ Filename pattern: Location data")
+                return ('technical', 'other', None, [])
+            # Hash with prefix: rs=AA2YrTskOaSug7MVZwlus97OpUaPcMM3bw
+            if '=' in filename:
+                print(f"  ✓ Filename pattern: Hash parameter file")
+                return ('technical', 'other', None, [])
+            # Single JS-style file: js(1)
+            if re.match(r'^[a-z]+\(\d+\)$', filename):
+                print(f"  ✓ Filename pattern: Script copy")
+                return ('technical', 'other', None, [])
+
+        # =========================================================
+        # PRESENTATION FILES: .pptx, .ppt, .key → Business/Presentations
+        # =========================================================
+        presentation_extensions = {'.pptx', '.ppt', '.key', '.odp'}
+        if ext in presentation_extensions:
+            print(f"  ✓ Filename pattern: Presentation ({ext})")
+            return ('business', 'presentations', None, [])
+
+        # =========================================================
+        # FINANCIAL XLSX FILES: earnings, budget, expenses, revenue
+        # =========================================================
+        if ext == '.xlsx':
+            financial_keywords = ['earnings', 'budget', 'expenses', 'revenue', 'income', 'profit', 'loss', 'financial']
+            if any(kw in stem for kw in financial_keywords):
+                print(f"  ✓ Filename pattern: Financial spreadsheet")
+                return ('financial', 'other', None, [])
+            # Data exports: Users.xlsx, Users_timestamp.xlsx (use original stem for case)
+            original_stem = file_path.stem
+            if re.match(r'^[A-Z][a-z]+s(_\d{8}_\d{6})?$', original_stem):
+                print(f"  ✓ Filename pattern: Data export")
+                return ('technical', 'data', None, [])
+
+        # =========================================================
+        # DOUBLE EXTENSION FILES: something.jpg.jp2
+        # =========================================================
+        if '.jpg.jp2' in filename.lower() or '.jpeg.jp2' in filename.lower():
+            print(f"  ✓ Filename pattern: Converted photo")
+            return ('media', 'photos_other', None, [])
+
+        # =========================================================
+        # TRAVEL DOCUMENTS: austin_to_bombay, trip_to_paris
+        # =========================================================
+        if '_to_' in stem or '-to-' in stem:
+            print(f"  ✓ Filename pattern: Travel document")
+            return ('person', 'travel', None, [])
+
+        # =========================================================
+        # EVENT DOCUMENTS: Oct25Event, Nov15Party (month+day in name)
+        # =========================================================
+        month_patterns = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+        if ext in {'.docx', '.doc', '.pdf'}:
+            for month in month_patterns:
+                if month in stem and re.search(r'\d{1,2}', stem):
+                    print(f"  ✓ Filename pattern: Event document")
+                    return ('person', 'events', None, [])
+
+        # =========================================================
+        # PERSONAL DOCUMENTS: Short name + version (Sumedh3.docx)
+        # =========================================================
+        if ext in {'.docx', '.doc'}:
+            original_stem = file_path.stem
+            # Short name followed by digit (personal documents)
+            if re.match(r'^[A-Z][a-z]+\d$', original_stem):
+                print(f"  ✓ Filename pattern: Personal document")
+                return ('person', 'other', None, [])
+            # PascalCase event names (ZoukSocial, DanceNight)
+            if re.match(r'^([A-Z][a-z]+){2,}$', original_stem):
+                print(f"  ✓ Filename pattern: Event document")
+                return ('person', 'events', None, [])
+
+        # =========================================================
+        # PITCH/PROPOSAL FILES: Pitch, Proposal with version
+        # =========================================================
+        if ext in {'.pptx', '.pdf', '.docx'}:
+            if stem.startswith('pitch') or stem.startswith('proposal'):
+                print(f"  ✓ Filename pattern: Business pitch/proposal")
+                return ('business', 'presentations', None, [])
+
+        return None
+
     def extract_text_from_image(self, image_path: Path) -> str:
         """Extract text from image using OCR."""
         if not self.ocr_available:
@@ -1965,12 +2500,13 @@ class ContentBasedFileOrganizer:
         Detect file category based on content.
 
         Priority order:
-        0. Organization entity detection (highest priority for documents)
-        1. Person entity detection
-        2. Game asset detection (audio, sprites, textures)
-        3. Filepath-based classification (file extensions, filenames)
-        4. Image content analysis (for home interiors)
-        5. OCR and text-based classification
+        0. Filename pattern detection (fastest - no content extraction needed)
+        1. Organization entity detection (for documents with content)
+        2. Person entity detection
+        3. Game asset detection (audio, sprites, textures)
+        4. Filepath-based classification (file extensions, filenames)
+        5. Image content analysis (for home interiors)
+        6. OCR and text-based classification
 
         Returns:
             Tuple of (main_category, subcategory, schema_type, extracted_text, company_name, people_names, image_metadata)
@@ -1991,7 +2527,14 @@ class ContentBasedFileOrganizer:
         else:
             schema_type = 'DigitalDocument'
 
-        # PRIORITY 0: Organization and Person detection for document-type files
+        # PRIORITY 0: Filename pattern detection (fastest - no content extraction needed)
+        # Handles: Google invoices, resumes, technical files, legal docs, business docs, entity files
+        filename_result = self.classify_by_filename_patterns(file_path)
+        if filename_result:
+            category, subcategory, company_name, people_names = filename_result
+            return (category, subcategory, schema_type, '', company_name, people_names, {})
+
+        # PRIORITY 1: Organization and Person detection for document-type files
         # Only apply to document/PDF types (not images, audio, video)
         if schema_type == 'DigitalDocument' or mime_type == 'application/pdf':
             print(f"  Checking for Organization/Person entities...")
@@ -2012,7 +2555,7 @@ class ContentBasedFileOrganizer:
                     print(f"  ✓ Person detected: {', '.join(people_names[:3]) if people_names else 'Unknown'} ({subcategory})")
                     return (category, subcategory, schema_type, extracted_text, None, people_names, {})
 
-        # PRIORITY 2: Check for game assets (before filepath patterns)
+        # PRIORITY 3: Check for game assets (before filepath patterns)
         game_asset = self.classify_game_asset(file_path)
         if game_asset:
             category, subcategory = game_asset
