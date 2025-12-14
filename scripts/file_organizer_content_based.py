@@ -428,21 +428,196 @@ class ContentClassifier:
 
         return relationships
 
-    def sanitize_company_name(self, company_name: str) -> str:
+    def is_valid_company_name(self, name: str) -> bool:
+        """
+        Check if a string is a valid company name (not a sentence fragment).
+
+        Returns:
+            True if valid company name, False if likely a sentence fragment
+        """
+        if not name:
+            return False
+
+        name_lower = name.lower().strip()
+        words = name.split()
+
+        # Reject if too long (real company names are usually < 60 chars)
+        if len(name) > 60:
+            return False
+
+        # Reject if too many words (company names rarely have > 6 words)
+        if len(words) > 6:
+            return False
+
+        # Sentence fragment indicators - words that start sentences, not companies
+        sentence_starters = {
+            'neither', 'either', 'total', 'the', 'a', 'an', 'if', 'when',
+            'where', 'while', 'although', 'because', 'since', 'unless',
+            'however', 'therefore', 'moreover', 'furthermore', 'additionally',
+            'please', 'note', 'see', 'refer', 'click', 'visit', 'contact',
+            'for', 'with', 'from', 'into', 'about', 'above', 'below',
+            'between', 'under', 'over', 'after', 'before', 'during',
+            'this', 'that', 'these', 'those', 'which', 'what', 'who',
+            'all', 'any', 'each', 'every', 'both', 'few', 'many', 'most',
+            'other', 'some', 'such', 'no', 'not', 'only', 'own', 'same',
+            'output', 'input', 'return', 'returns', 'required', 'optional',
+        }
+
+        # Check first word
+        if words and words[0].lower() in sentence_starters:
+            return False
+
+        # Sentence patterns - these indicate full sentences, not company names
+        sentence_patterns = [
+            r'\b(?:is|are|was|were|be|been|being)\b',  # Verbs
+            r'\b(?:to|of|in|on|at|by)\s+(?:the|a|an)\b',  # Preposition + article
+            r'\b(?:you|your|we|our|they|their|it|its)\b',  # Pronouns
+            r'\b(?:can|could|will|would|shall|should|may|might|must)\b',  # Modal verbs
+            r'\b(?:and|or|but|nor|yet|so)\s+\w+\s+\w+',  # Conjunction + multiple words
+        ]
+
+        for pattern in sentence_patterns:
+            if re.search(pattern, name_lower):
+                return False
+
+        # Check for specific problematic patterns
+        problematic_phrases = [
+            'the name of', 'in usd', 'total in', 'output only',
+            'required for', 'agreement between', 'agreement of',
+            'certificate of', 'description of', 'operating agreement',
+            'license this', 'http rule', 'member-managed',
+            'need some', 'print out', 'user provided',
+            'ceo of', 'cfo of', 'cto of', 'coo of',  # Title patterns
+            'president of', 'director of', 'manager of',
+            'taxpayer number', 'tax id', 'ein number',  # Tax/ID patterns
+            'student award', 'professional access',  # Award patterns
+            'proprietor general', 'general partnership',  # Legal entity types
+            'personal workload', 'workload and',  # Incomplete phrases
+            'data usage agreement', 'service agreement',
+            'contributions on behalf', 'on behalf of',
+        ]
+
+        for phrase in problematic_phrases:
+            if phrase in name_lower:
+                return False
+
+        # Reject names ending with conjunctions (incomplete phrases)
+        if words and words[-1].lower() in {'and', 'or', 'but', 'nor', 'yet', 'so', 'the', 'a', 'an', 'of', 'to', 'in', 'on', 'at', 'by'}:
+            return False
+
+        # Reject names starting with titles followed by "of"
+        if len(words) >= 3 and words[1].lower() == 'of':
+            title_words = {'ceo', 'cfo', 'cto', 'coo', 'president', 'director', 'manager', 'chairman', 'founder'}
+            if words[0].lower() in title_words:
+                return False
+
+        return True
+
+    def normalize_company_name(self, company_name: str) -> str:
+        """
+        Normalize company name by extracting actual company from common patterns.
+
+        Handles patterns like:
+        - "Copyright 2024 Google" -> "Google"
+        - "© 2020 Microsoft Corporation" -> "Microsoft"
+        - "(c) 2019-2024 Apple Inc" -> "Apple"
+        - "Copyright (C) 2023 Amazon" -> "Amazon"
+        - "Google LLC" -> "Google"
+        - "Apple Inc." -> "Apple"
+
+        Returns:
+            Normalized company name, or None if invalid
+        """
+        if not company_name:
+            return company_name
+
+        # Patterns to extract company name from copyright notices
+        copyright_patterns = [
+            # "Copyright 2024 Google" or "Copyright (C) 2024 Google"
+            r'(?:copyright|©|\(c\))\s*(?:\(c\))?\s*(?:\d{4}(?:\s*[-–—]\s*\d{4})?)\s+(.+)',
+            # "2024 Google" (just year followed by company)
+            r'^\d{4}(?:\s*[-–—]\s*\d{4})?\s+([A-Z][A-Za-z0-9\s&\-\.]+)$',
+            # "(c) Google 2024" (company before year)
+            r'(?:copyright|©|\(c\))\s+([A-Z][A-Za-z0-9\s&\-\.]+?)\s+\d{4}',
+            # "Copyright Google" or "© Google" (without year)
+            r'^(?:copyright|©|\(c\))\s+([A-Za-z][A-Za-z0-9\s&\-\.]+)$',
+        ]
+
+        name_lower = company_name.lower().strip()
+        result = company_name
+
+        # Check if this looks like a copyright notice
+        if any(indicator in name_lower for indicator in ['copyright', '©', '(c)']):
+            for pattern in copyright_patterns:
+                match = re.search(pattern, company_name, re.IGNORECASE)
+                if match:
+                    extracted = match.group(1).strip()
+                    # Clean up trailing punctuation
+                    extracted = re.sub(r'[.,;:]+$', '', extracted).strip()
+                    if extracted and len(extracted) >= 2:
+                        result = extracted
+                        break
+
+        # Check for year prefix pattern (e.g., "2024 Google")
+        if result == company_name:
+            year_prefix_match = re.match(r'^(\d{4}(?:\s*[-–—]\s*\d{4})?)\s+(.+)$', company_name)
+            if year_prefix_match:
+                extracted = year_prefix_match.group(2).strip()
+                if extracted and len(extracted) >= 2:
+                    result = extracted
+
+        # Strip legal suffixes to consolidate company variants
+        # Order matters: check longer suffixes first
+        legal_suffixes = [
+            # Full words with variations
+            r'\s+Incorporated$',
+            r'\s+Corporation$',
+            r'\s+Limited$',
+            r'\s+Company$',
+            # Abbreviations with optional period
+            r'\s+L\.L\.C\.$',
+            r'\s+L\.L\.P\.$',
+            r'\s+LLC\.?$',
+            r'\s+LLP\.?$',
+            r'\s+Inc\.?$',
+            r'\s+Corp\.?$',
+            r'\s+Ltd\.?$',
+            r'\s+Co\.?$',
+            # Other common suffixes
+            r'\s+PLC\.?$',
+            r'\s+LP\.?$',
+            r'\s+SA$',
+            r'\s+GmbH$',
+            r'\s+AG$',
+        ]
+
+        for suffix_pattern in legal_suffixes:
+            result = re.sub(suffix_pattern, '', result, flags=re.IGNORECASE).strip()
+
+        return result
+
+    def sanitize_company_name(self, company_name: str) -> Optional[str]:
         """
         Sanitize company name for use in folder names.
 
         Returns:
-            Sanitized folder name
+            Sanitized folder name, or None if the name is invalid (sentence fragment)
         """
+        # First normalize the company name (extract from copyright patterns, etc.)
+        normalized = self.normalize_company_name(company_name)
+
+        # Validate that this is a real company name, not a sentence fragment
+        if not self.is_valid_company_name(normalized):
+            return None
+
         # Remove special characters that aren't allowed in folder names
-        sanitized = re.sub(r'[<>:"/\\|?*]', '', company_name)
+        sanitized = re.sub(r'[<>:"/\\|?*]', '', normalized)
         # Replace multiple spaces with single space
         sanitized = ' '.join(sanitized.split())
         # Limit length
         if len(sanitized) > 50:
             sanitized = sanitized[:50].strip()
-        return sanitized
+        return sanitized if sanitized else None
 
     def classify_content(self, text: str, filename: str = "") -> Tuple[str, str, Optional[str], List[str]]:
         """
@@ -2031,12 +2206,14 @@ class ContentBasedFileOrganizer:
         # Exception: Organization/Clients/{OrgName}/ for clients (nested subfolders)
         if category == 'organization' and company_name:
             sanitized_company = self.classifier.sanitize_company_name(company_name)
-            if subcategory == 'clients':
-                # Clients get nested: Organization/Clients/{OrgName}/
-                relative_path = f"{relative_path}/{sanitized_company}"
-            else:
-                # All other org types: Organization/{OrgName}/
-                relative_path = f"{relative_path}/{sanitized_company}"
+            # Only create company subfolder if name is valid (not a sentence fragment)
+            if sanitized_company:
+                if subcategory == 'clients':
+                    # Clients get nested: Organization/Clients/{OrgName}/
+                    relative_path = f"{relative_path}/{sanitized_company}"
+                else:
+                    # All other org types: Organization/{OrgName}/
+                    relative_path = f"{relative_path}/{sanitized_company}"
 
         # Person: Create person-named subfolders under Person/
         # Structure: Person/{PersonName}/ for all types
@@ -2044,7 +2221,11 @@ class ContentBasedFileOrganizer:
             # Use first person name as the folder name
             person_name = people_names[0] if people_names else 'Unknown'
             sanitized_person = self.classifier.sanitize_company_name(person_name)
-            relative_path = f"{relative_path}/{sanitized_person}"
+            # Only create person subfolder if name is valid
+            if sanitized_person:
+                relative_path = f"{relative_path}/{sanitized_person}"
+            else:
+                relative_path = f"{relative_path}/Unknown"
         elif category == 'person' and not people_names:
             # Fallback for person category without extracted names
             relative_path = f"{relative_path}/Unknown"
@@ -2052,7 +2233,9 @@ class ContentBasedFileOrganizer:
         # Legacy: client files from business category with company name
         if category == 'business' and subcategory == 'clients' and company_name:
             sanitized_company = self.classifier.sanitize_company_name(company_name)
-            relative_path = f"{relative_path}/{sanitized_company}"
+            # Only create company subfolder if name is valid
+            if sanitized_company:
+                relative_path = f"{relative_path}/{sanitized_company}"
 
         # Date-based organization for images (if enabled and metadata available)
         if self.organize_by_date and image_metadata and image_metadata.get('year'):
@@ -2194,13 +2377,14 @@ class ContentBasedFileOrganizer:
         except Exception as e:
             print(f"  ⚠ Graph store error (non-fatal): {e}")
 
-    def organize_file(self, file_path: Path, dry_run: bool = False) -> Dict:
+    def organize_file(self, file_path: Path, dry_run: bool = False, force: bool = False) -> Dict:
         """
         Organize a single file based on content.
 
         Args:
             file_path: Path to the file
             dry_run: If True, don't actually move files
+            force: If True, re-organize even if already in correct location
 
         Returns:
             Dictionary with organization details
@@ -2241,8 +2425,8 @@ class ContentBasedFileOrganizer:
             # Get destination path (with optional date/location organization for images)
             dest_path = self.get_destination_path(file_path, category, subcategory, company_name, image_metadata, people_names)
 
-            # Skip if already in the right place
-            if file_path == dest_path:
+            # Skip if already in the right place (unless force=True)
+            if file_path == dest_path and not force:
                 result['status'] = 'already_organized'
                 result['destination'] = str(dest_path)
                 result['schema'] = schema
@@ -2316,7 +2500,7 @@ class ContentBasedFileOrganizer:
             print(f"Permission denied: {directory}")
         return files
 
-    def organize_directories(self, source_dirs: List[str], dry_run: bool = False, limit: int = None) -> Dict:
+    def organize_directories(self, source_dirs: List[str], dry_run: bool = False, limit: int = None, force: bool = False) -> Dict:
         """
         Organize files from multiple source directories.
 
@@ -2324,6 +2508,7 @@ class ContentBasedFileOrganizer:
             source_dirs: List of directory paths to organize
             dry_run: If True, simulate organization without moving files
             limit: Maximum number of files to process (for testing)
+            force: If True, re-organize files even if already in correct location
 
         Returns:
             Dictionary with organization results
@@ -2360,7 +2545,7 @@ class ContentBasedFileOrganizer:
         # Organize each file
         for i, file_path in enumerate(all_files, 1):
             print(f"[{i}/{len(all_files)}] Processing: {file_path.name}")
-            result = self.organize_file(file_path, dry_run=dry_run)
+            result = self.organize_file(file_path, dry_run=dry_run, force=force)
             results.append(result)
 
             if result['status'] == 'organized' or result['status'] == 'would_organize':
@@ -2608,6 +2793,11 @@ def main():
         action='store_true',
         help='Run database migration to add canonical_id columns to existing records'
     )
+    parser.add_argument(
+        '--force',
+        action='store_true',
+        help='Force re-organization of all files, even if already in correct location'
+    )
 
     args = parser.parse_args()
 
@@ -2660,7 +2850,8 @@ def main():
     summary = organizer.organize_directories(
         source_dirs=args.sources,
         dry_run=args.dry_run,
-        limit=args.limit
+        limit=args.limit,
+        force=args.force
     )
 
     # Print summary
