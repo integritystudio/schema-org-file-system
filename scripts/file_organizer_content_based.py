@@ -1993,6 +1993,12 @@ class ContentBasedFileOrganizer:
             if 'contacts' in stem and ext in {'.xlsx', '.xls', '.csv', '.docx', '.pdf'}:
                 print(f"  ✓ Filename pattern: CRM/Contacts file")
                 return ('business', 'crm', None, [])
+            # Third party vendor/partner evaluation files
+            thirdparty_patterns = ['3rdparties', '3rdparty', 'thirdparties', 'thirdparty',
+                                   'third_parties', 'third_party', 'third-parties', 'third-party']
+            if any(p in stem for p in thirdparty_patterns):
+                print(f"  ✓ Filename pattern: Third-party vendor/partner list")
+                return ('business', 'crm', None, [])
 
         # HR/Job posting files (but not code files like application.py, linkedin.py)
         # Note: 'application' and 'linkedin' are common in code filenames
@@ -2008,10 +2014,18 @@ class ContentBasedFileOrganizer:
                 print(f"  ✓ Filename pattern: HR file")
                 return ('business', 'hr', None, [])
 
-        # Project tracking files (but not code files)
+        # Project tracking and product planning files (but not code files)
         if ext not in business_skip_extensions:
             if 'projecttrack' in stem or 'project_track' in stem or 'project-track' in stem:
                 print(f"  ✓ Filename pattern: Project tracking")
+                return ('business', 'planning', None, [])
+            # Product ideas, analysis, and roadmap files
+            planning_patterns = ['productideas', 'product_ideas', 'product-ideas',
+                                'productanalysis', 'product_analysis', 'product-analysis',
+                                'productroadmap', 'product_roadmap', 'product-roadmap',
+                                'roadmap_product', 'roadmap-product', 'roadmapproduct']
+            if any(p in stem for p in planning_patterns):
+                print(f"  ✓ Filename pattern: Product planning/analysis")
                 return ('business', 'planning', None, [])
 
         # Operations/Dashboard files (but not code files like dashboard.py, operations.py)
