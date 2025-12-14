@@ -2030,11 +2030,26 @@ class ContentBasedFileOrganizer:
             return ('business', 'other', None, [])
 
         # =========================================================
-        # GOOGLE INVOICES: 51xxxxx.pdf, 52xxxxx.pdf patterns
+        # GOOGLE INVOICES: 51xxxxx.pdf, 52xxxxx.pdf, 53xxxxx.pdf patterns
         # =========================================================
-        if ext == '.pdf' and re.match(r'^5[12]\d{8,}', filename):
+        if ext == '.pdf' and re.match(r'^5[123]\d{8,}', filename):
             print(f"  ✓ Filename pattern: Google invoice")
             return ('organization', 'vendors', 'Google', [])
+
+        # =========================================================
+        # SCREENSHOTS: Files with 'screenshot' in name → Media/Photos/Screenshots
+        # =========================================================
+        if 'screenshot' in stem:
+            print(f"  ✓ Filename pattern: Screenshot")
+            return ('media', 'photos_screenshots', None, [])
+
+        # =========================================================
+        # SURVEYS: Survey/questionnaire documents → Business/Other
+        # =========================================================
+        survey_patterns = ['survey', 'questionnaire', 'feedback-form', 'feedback_form']
+        if ext in {'.docx', '.doc', '.pdf', '.xlsx', '.xls'} and any(p in stem for p in survey_patterns):
+            print(f"  ✓ Filename pattern: Survey/questionnaire")
+            return ('business', 'other', None, [])
 
         # Known person name patterns (used in multiple places)
         known_person_patterns = {
