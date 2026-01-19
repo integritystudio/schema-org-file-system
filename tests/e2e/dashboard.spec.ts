@@ -1,0 +1,178 @@
+import { test, expect } from './fixtures/index.js';
+import { measurePagePerformance, checkThresholds, formatMetrics, DEFAULT_THRESHOLDS } from './fixtures/performance.js';
+
+test.describe('Dashboard', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+  });
+
+  test('should load the main dashboard', async ({ page }) => {
+    // Verify hero section
+    await expect(page.locator('h1')).toContainText('Schema.org File Organization');
+    await expect(page.locator('.hero-subtitle')).toContainText('AI-Powered Content Analysis');
+  });
+
+  test('should display resource usage panel', async ({ page }) => {
+    const resourcePanel = page.locator('.resource-panel');
+    await expect(resourcePanel).toBeVisible();
+
+    // Check for resource items
+    await expect(page.locator('#files-analyzed')).toBeVisible();
+    await expect(page.locator('#time-spent')).toBeVisible();
+    await expect(page.locator('#cpu-time')).toBeVisible();
+    await expect(page.locator('#gpu-cost')).toBeVisible();
+  });
+
+  test('should display statistics bar', async ({ page }) => {
+    const statsBar = page.locator('.stats-bar');
+    await expect(statsBar).toBeVisible();
+
+    // Should have 4 stat items
+    const statItems = page.locator('.stat-item');
+    await expect(statItems).toHaveCount(4);
+
+    // Verify stat labels exist
+    await expect(page.getByText('Files Processed')).toBeVisible();
+    await expect(page.getByText('Success Rate')).toBeVisible();
+    await expect(page.getByText('Categories')).toBeVisible();
+    await expect(page.getByText('ML Accuracy')).toBeVisible();
+  });
+
+  test('should display feature cards', async ({ page }) => {
+    const cardsGrid = page.locator('.cards-grid');
+    await expect(cardsGrid).toBeVisible();
+
+    // Should have 4 feature cards
+    const featureCards = page.locator('.feature-card');
+    await expect(featureCards).toHaveCount(4);
+
+    // Verify card titles
+    await expect(page.locator('.card-title').filter({ hasText: 'Organization Report' })).toBeVisible();
+    await expect(page.locator('.card-title').filter({ hasText: 'Metadata Viewer' })).toBeVisible();
+    await expect(page.locator('.card-title').filter({ hasText: 'Correction Interface' })).toBeVisible();
+    await expect(page.locator('.card-title').filter({ hasText: 'ML Data Explorer' })).toBeVisible();
+  });
+
+  test('should navigate to Organization Report', async ({ page }) => {
+    await page.click('a[href="organization_report.html"]');
+    // URL may or may not have .html extension depending on server config
+    await expect(page).toHaveURL(/organization_report/);
+  });
+
+  test('should navigate to Metadata Viewer', async ({ page }) => {
+    await page.click('a[href="metadata_viewer.html"]');
+    await expect(page).toHaveURL(/metadata_viewer/);
+  });
+
+  test('should navigate to Correction Interface', async ({ page }) => {
+    await page.click('a[href="correction_interface.html"]');
+    await expect(page).toHaveURL(/correction_interface/);
+  });
+
+  test('should navigate to ML Data Explorer', async ({ page }) => {
+    await page.click('a[href="ml_data_explorer.html"]');
+    await expect(page).toHaveURL(/ml_data_explorer/);
+  });
+
+  test('should display technology stack in footer', async ({ page }) => {
+    const footer = page.locator('.footer');
+    await expect(footer).toBeVisible();
+
+    // Verify tech badges
+    await expect(page.locator('.tech-badge').filter({ hasText: 'Python 3.14' })).toBeVisible();
+    await expect(page.locator('.tech-badge').filter({ hasText: 'CLIP Vision AI' })).toBeVisible();
+    await expect(page.locator('.tech-badge').filter({ hasText: 'Schema.org' })).toBeVisible();
+  });
+
+  test('should have responsive layout on mobile', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    // Cards should stack vertically on mobile
+    const cardsGrid = page.locator('.cards-grid');
+    await expect(cardsGrid).toBeVisible();
+
+    // Hero should still be visible
+    await expect(page.locator('.hero h1')).toBeVisible();
+  });
+
+  test('feature cards should have hover effects', async ({ page }) => {
+    const firstCard = page.locator('.feature-card').first();
+
+    // Get initial transform
+    const initialTransform = await firstCard.evaluate((el) => {
+      return window.getComputedStyle(el).transform;
+    });
+
+    // Hover over the card
+    await firstCard.hover();
+
+    // Wait for animation
+    await page.waitForTimeout(500);
+
+    // Transform should change on hover
+    const hoverTransform = await firstCard.evaluate((el) => {
+      return window.getComputedStyle(el).transform;
+    });
+
+    // The transform should be different (card moves up)
+    expect(hoverTransform).not.toBe(initialTransform);
+  });
+});
+
+test.describe('Dashboard Performance', () => {
+  test('should meet Core Web Vitals thresholds', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('load');
+
+    // Wait for any animations to complete
+    await page.waitForTimeout(1000);
+
+    const metrics = await measurePagePerformance(page);
+    console.log(formatMetrics(metrics));
+
+    const violations = checkThresholds(metrics, DEFAULT_THRESHOLDS);
+
+    if (violations.length > 0) {
+      console.warn('Performance threshold violations:');
+      violations.forEach(v => console.warn(`  - ${v}`));
+    }
+
+    // Assert no critical violations (LCP should be under 2.5s for initial load)
+    if (metrics.lcp !== null) {
+      expect(metrics.lcp).toBeLessThan(2500);
+    }
+  });
+
+  test('should load within acceptable time', async ({ page }) => {
+    const startTime = Date.now();
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    const loadTime = Date.now() - startTime;
+
+    console.log(`Page load time: ${loadTime}ms`);
+
+    // Page should load within 5 seconds
+    expect(loadTime).toBeLessThan(5000);
+  });
+
+  test('should not have excessive network requests', async ({ page }) => {
+    const requests: string[] = [];
+
+    page.on('request', (request) => {
+      requests.push(request.url());
+    });
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    console.log(`Total network requests: ${requests.length}`);
+
+    // Should not have more than 50 requests for initial page load
+    expect(requests.length).toBeLessThan(50);
+  });
+});
