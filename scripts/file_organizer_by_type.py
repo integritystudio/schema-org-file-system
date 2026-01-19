@@ -16,7 +16,7 @@ class FileTypeOrganizer:
 
     def __init__(self, base_path: str = None):
         """Initialize the organizer."""
-        self.base_path = Path(base_path or os.path.expanduser("~/Documents"))
+        self.base_path = Path(base_path or "~/Documents").expanduser()
         self.stats = defaultdict(int)
 
         # File type to category mapping

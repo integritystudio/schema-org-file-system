@@ -1153,7 +1153,7 @@ class ContentBasedFileOrganizer:
             enable_cost_tracking: If True, track costs and ROI for all features
             db_path: Path to SQLite database for persistent storage
         """
-        self.base_path = Path(base_path or os.path.expanduser("~/Documents"))
+        self.base_path = Path(base_path or "~/Documents").expanduser()
 
         # Initialize cost tracking if available and enabled
         self.cost_calculator = None
