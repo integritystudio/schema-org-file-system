@@ -32,14 +32,15 @@ class ImageRenamer:
     """Rename images based on metadata."""
 
     # Patterns that indicate non-human-readable filenames
+    # Note: These are matched against lowercased filenames
     GENERIC_PATTERNS = [
-        r'^IMG_\d+',           # IMG_1234.jpg
-        r'^DSC_\d+',           # DSC_1234.jpg
-        r'^PXL_\d+',           # PXL_20250425_023840031.jpg
-        r'^DCIM_\d+',          # DCIM_1234.jpg
+        r'^img_\d+',           # IMG_1234.jpg
+        r'^dsc_?\d+',          # DSC_1234.jpg, DSC1234.jpg
+        r'^pxl_\d+',           # PXL_20250425_023840031.jpg
+        r'^dcim_\d+',          # DCIM_1234.jpg
         r'^\d{8}_\d{6}',       # 20250425_123456.jpg
         r'^\d{4}-\d{2}-\d{2}', # 2025-04-25.jpg
-        r'^Screenshot\s+\d{4}', # Screenshot 2025-11-23...
+        r'^screenshot\s+\d{4}', # Screenshot 2025-11-23...
         r'^\d+$',              # 12345.jpg (pure numbers)
         r'^[a-f0-9]{32}',      # MD5-style hashes
         r'^unnamed\(\d+\)',    # unnamed(1).jpg

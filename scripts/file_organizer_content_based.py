@@ -184,6 +184,11 @@ class ContentClassifier:
 
         # People name patterns - look for common name patterns
         self.people_patterns = [
+            # ALL-CAPS names at start of resume (common in templates)
+            # Matches: "ISABEL BUDENZ\nLLM" or "JOHN DOE\nSoftware Engineer"
+            r'^([A-Z]{2,})\s+([A-Z]{2,})\s*\n',
+            # ALL-CAPS name followed by title/degree
+            r'\b([A-Z]{2,})\s+([A-Z]{2,})\s*\n\s*(?:LLM|MBA|PhD|MD|JD|CPA|Software|Engineer|Manager|Director|Analyst)',
             # Name with document type indicators
             r'\b([A-Z][a-z]+)\s+([A-Z][a-z]+)\s+(?:Resume|CV|Cover Letter)\b',
             r'\b([A-Z][a-z]+)\s+([A-Z][a-z]+)\s+(?:Portfolio|Biography|Bio)\b',
@@ -354,6 +359,24 @@ class ContentClassifier:
 
         return unique_companies
 
+    def _collapse_spaced_text(self, text: str) -> str:
+        """
+        Collapse spaced-out text like "I S A B E L  B U D E N Z" to "ISABEL BUDENZ".
+        Common in stylized resume/CV templates.
+        """
+        # Pattern: single letters separated by spaces (at least 3 in a row)
+        # Match sequences like "I S A B E L" (single chars with single spaces)
+        def collapse_match(match):
+            spaced = match.group(0)
+            # Remove single spaces between single characters
+            collapsed = re.sub(r'(?<=\b[A-Z]) (?=[A-Z]\b)', '', spaced)
+            return collapsed
+
+        # Find sequences of spaced single uppercase letters
+        # Pattern matches: capital letter, space, capital letter (repeated)
+        result = re.sub(r'\b([A-Z] ){2,}[A-Z]\b', collapse_match, text)
+        return result
+
     def extract_people_names(self, text: str) -> List[str]:
         """
         Extract people names from text using regex patterns.
@@ -361,6 +384,9 @@ class ContentClassifier:
         Returns:
             List of detected people names
         """
+        # Preprocess: collapse spaced-out text (common in stylized resumes)
+        text = self._collapse_spaced_text(text)
+
         people = []
         for pattern in self.people_patterns:
             matches = re.findall(pattern, text)
@@ -379,6 +405,9 @@ class ContentClassifier:
         for person in people:
             # Clean up whitespace
             clean = ' '.join(person.split())
+            # Convert ALL-CAPS to Title Case (common in resume headers)
+            if clean.isupper():
+                clean = clean.title()
             # Skip if too short or already seen
             if len(clean) > 2 and clean.lower() not in seen:
                 seen.add(clean.lower())
@@ -2086,22 +2115,36 @@ class ContentBasedFileOrganizer:
         code_extensions = {'.py', '.js', '.ts', '.jsx', '.tsx', '.css', '.scss', '.less', '.html', '.htm'}
 
         resume_patterns = ['resume', 'curriculum_vitae', 'curriculum-vitae']
-        # Only match 'cv' if it's the whole filename or clearly a CV document (not in middle of hash)
-        is_cv_document = (stem == 'cv' or stem.startswith('cv_') or stem.startswith('cv-') or
-                         '_cv' in stem or '-cv' in stem or stem.endswith('_cv') or stem.endswith('-cv'))
+        # Match 'cv' if it's the whole filename, has separators, or starts with 'cv ' (space)
+        stem_lower = stem.lower()
+        is_cv_document = (stem_lower == 'cv' or stem_lower.startswith('cv_') or stem_lower.startswith('cv-') or
+                         stem_lower.startswith('cv ') or '_cv' in stem_lower or '-cv' in stem_lower or
+                         ' cv' in stem_lower or stem_lower.endswith('_cv') or stem_lower.endswith('-cv'))
 
         if ext in document_extensions and (any(p in filename_lower for p in resume_patterns) or is_cv_document):
             # Try to extract person name from filename
             person_name = None
-            # Pattern: FirstName_LastName_Resume or Resume_FirstName_LastName
-            name_match = re.search(r'([A-Z][a-z]+)[_\-\s]+([A-Z][a-z]+)[_\-\s]+(resume|cv)', filename, re.IGNORECASE)
+
+            # Pattern 1: CV/Resume at START followed by FirstName LastName (e.g., "CV Isabel Budenz January")
+            name_match = re.search(r'^(cv|resume)[_\-\s]+([A-Z][a-z]+)[_\-\s]+([A-Z][a-z]+)', filename, re.IGNORECASE)
             if name_match:
-                person_name = f"{name_match.group(1)} {name_match.group(2)}"
-            else:
-                # Try reverse: resume_FirstName_LastName
-                name_match = re.search(r'(resume|cv)[_\-\s]+([A-Z][a-z]+)[_\-\s]+([A-Z][a-z]+)', filename, re.IGNORECASE)
+                person_name = f"{name_match.group(2)} {name_match.group(3)}"
+
+            # Pattern 2: FirstName LastName at START followed by CV/Resume (e.g., "Alyshia_Ledlie_Technical_Resume")
+            # Take the FIRST two capitalized words as the name
+            if not person_name:
+                name_match = re.search(r'^([A-Z][a-z]+)[_\-\s]+([A-Z][a-z]+)', filename)
                 if name_match:
-                    person_name = f"{name_match.group(2)} {name_match.group(3)}"
+                    # Verify this file contains resume/cv somewhere
+                    if 'resume' in filename_lower or is_cv_document:
+                        candidate = f"{name_match.group(1)} {name_match.group(2)}"
+                        # Skip template/style names that aren't person names
+                        template_words = {'modern', 'minimalist', 'professional', 'creative', 'simple',
+                                         'elegant', 'classic', 'template', 'standard', 'basic', 'clean'}
+                        first_word = name_match.group(1).lower()
+                        second_word = name_match.group(2).lower()
+                        if first_word not in template_words and second_word not in template_words:
+                            person_name = candidate
 
             # Check for known person names if no name extracted yet
             if not person_name:
@@ -2110,8 +2153,13 @@ class ContentBasedFileOrganizer:
                         person_name = known_name
                         break
 
-            print(f"  ✓ Filename pattern: Resume" + (f" ({person_name})" if person_name else ""))
-            return ('person', 'contacts', None, [person_name] if person_name else [])
+            # If name found in filename, return immediately
+            if person_name:
+                print(f"  ✓ Filename pattern: Resume ({person_name})")
+                return ('person', 'contacts', None, [person_name])
+            # If no name found, don't return - fall through to OCR content extraction
+            # This allows "Modern Minimalist CV Resume.pdf" to get name from PDF content
+            print(f"  ✓ Filename pattern: Resume (extracting name from content...)")
 
         # =========================================================
         # COVER LETTERS: *coverletter*, *cover_letter* - document files
@@ -2425,38 +2473,43 @@ class ContentBasedFileOrganizer:
         # Common pattern for game sprite sheets
         # =========================================================
         if ext in {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.jp2'}:
+            # EXCLUDE camera photo naming conventions from game asset detection
+            # These are photos from cameras/phones, not game assets
+            camera_prefixes = ('pxl_', 'img_', 'dsc_', 'dcim_', 'dscn_', 'dscf_', 'p_', 'photo_')
+            is_camera_photo = stem.startswith(camera_prefixes)
+
             # Pattern: purely numeric filename (0.png, 103.png, 42_8.png)
-            if re.match(r'^\d+(_\d+)*$', stem):
+            if not is_camera_photo and re.match(r'^\d+(_\d+)*$', stem):
                 print(f"  ✓ Filename pattern: Numbered sprite")
                 return ('game_assets', 'sprites', None, [])
             # Pattern: numeric with timestamp suffix (103_20251120_164958.png)
-            if re.match(r'^\d+(_\d+)*_\d{8}_\d{6}$', stem):
+            if not is_camera_photo and re.match(r'^\d+(_\d+)*_\d{8}_\d{6}$', stem):
                 print(f"  ✓ Filename pattern: Numbered sprite (timestamped)")
                 return ('game_assets', 'sprites', None, [])
             # Pattern: font-related files - check BEFORE generic sprite patterns
             # (ascii_font.png, unicode_font.png, game_font.png, pixel_font.png)
-            if 'font' in stem or 'glyph' in stem or 'charset' in stem:
+            if not is_camera_photo and ('font' in stem or 'glyph' in stem or 'charset' in stem):
                 print(f"  ✓ Filename pattern: Font asset")
                 return ('game_assets', 'fonts', None, [])
             # Pattern: name_hash.png (animal_57886bff.png, drop_2_6.png)
-            if re.match(r'^[a-z]+(_[a-z0-9]+)+$', stem):
+            if not is_camera_photo and re.match(r'^[a-z]+(_[a-z0-9]+)+$', stem):
                 print(f"  ✓ Filename pattern: Game asset (named)")
                 return ('game_assets', 'sprites', None, [])
             # Pattern: _hash or _name (starts with underscore, like _RWOIsUgWGL.png)
-            if re.match(r'^_[A-Za-z0-9]+(_\d{8}_\d{6})?$', stem):
+            if not is_camera_photo and re.match(r'^_[A-Za-z0-9]+(_\d{8}_\d{6})?$', stem):
                 print(f"  ✓ Filename pattern: Game asset (underscore prefix)")
                 return ('game_assets', 'sprites', None, [])
             # Pattern: number_word (17_in.png, 17_out_1.png)
-            if re.match(r'^\d+_[a-z]+(_\d+)?$', stem):
+            if not is_camera_photo and re.match(r'^\d+_[a-z]+(_\d+)?$', stem):
                 print(f"  ✓ Filename pattern: Game asset (numbered)")
                 return ('game_assets', 'sprites', None, [])
             # Pattern: hex codes for emoji/unicode (1f4a8.png, 1f600.png)
-            if re.match(r'^[0-9a-f]{4,8}$', stem):
+            if not is_camera_photo and re.match(r'^[0-9a-f]{4,8}$', stem):
                 print(f"  ✓ Filename pattern: Emoji/unicode asset")
                 return ('game_assets', 'sprites', None, [])
             # Pattern: date_category[_status]_id (ML training data)
             # Matches: 20190129_art_uncertain_100453.png, 20190129_pet_100453_1.png
-            if re.match(r'^\d{8}_[a-z]+(_[a-z]+)?_\d+(_\d+)*$', stem):
+            if not is_camera_photo and re.match(r'^\d{8}_[a-z]+(_[a-z]+)?_\d+(_\d+)*$', stem):
                 print(f"  ✓ Filename pattern: ML training data")
                 return ('game_assets', 'sprites', None, [])
             # Pattern: Facebook photo (481566579_10162021550590804_5823185318886800843_n.png)
@@ -2967,6 +3020,47 @@ class ContentBasedFileOrganizer:
 
             if image_metadata.get('location_name'):
                 print(f"  ✓ Location: {image_metadata['location_name']}")
+
+        # PRIORITY 3.5: Check for identification documents in images (passport, ID, license)
+        # These should go to Person/ folder, not Media/
+        if schema_type == 'ImageObject' and self.ocr_available:
+            # Extract text from image via OCR
+            ocr_text = self.extract_text_from_image(file_path)
+            if ocr_text and len(ocr_text) >= 30:
+                ocr_lower = ocr_text.lower()
+                # Check for identification document keywords
+                id_keywords = ['passport', 'driver license', "driver's license", 'identification',
+                              'united states of america', 'department of state', 'nationality',
+                              'date of birth', 'place of birth', 'surname', 'given names',
+                              'social security', 'state id', 'national id']
+                if any(kw in ocr_lower for kw in id_keywords):
+                    print(f"  ✓ Identification document detected via OCR")
+                    people_names = []
+
+                    # Method 1: Parse passport MRZ (Machine Readable Zone)
+                    # Format: P<COUNTRY{SURNAME}<<{GIVEN_NAME}<...
+                    mrz_match = re.search(r'P<[A-Z]{3}([A-Z]+)<<([A-Z]+)<', ocr_text)
+                    if mrz_match:
+                        surname = mrz_match.group(1).title()
+                        given = mrz_match.group(2).title()
+                        people_names = [f"{given} {surname}"]
+
+                    # Method 2: Look for name fields with values on next line or after colon
+                    # Passport format: "Surname\nLEDLIE" or "Surname/Nom\nLEDLIE"
+                    if not people_names:
+                        # Find surname (all caps, standalone on line)
+                        surname_match = re.search(r'(?:surname|nom|apellidos)[/\w\s]*\n\s*([A-Z]{2,})\b', ocr_text, re.IGNORECASE)
+                        given_match = re.search(r'(?:given\s*names?|pr[ée]noms?|nombres)[/\w\s]*\n\s*([A-Z]{2,})\b', ocr_text, re.IGNORECASE)
+                        if surname_match and given_match:
+                            people_names = [f"{given_match.group(1).title()} {surname_match.group(1).title()}"]
+
+                    # Method 3: General name extraction patterns
+                    if not people_names:
+                        people_names = self.classifier.extract_people_names(ocr_text)
+
+                    if people_names:
+                        print(f"  ✓ Person identified: {people_names[0]}")
+                    return ('person', 'contacts', schema_type, ocr_text, None, people_names, image_metadata)
 
         # PRIORITY 4: Check for media files (photos, videos, audio)
         # This runs after metadata extraction so we can use GPS/datetime for classification
