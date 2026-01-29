@@ -109,7 +109,7 @@ def _args_to_argv(args):
     """Convert argparse namespace to argv list."""
     argv = []
     for key, value in vars(args).items():
-        if key == 'func':
+        if key in ('func', 'command'):
             continue
         if value is None or value is False:
             continue
