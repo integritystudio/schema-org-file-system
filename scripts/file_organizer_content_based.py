@@ -2517,9 +2517,18 @@ class ContentBasedFileOrganizer:
                 print(f"  ✓ Filename pattern: Social media photo")
                 return ('media', 'photos_social', None, [])
             # Pattern: single word lowercase (achiever.png, sword.png)
-            if re.match(r'^[a-z]+$', stem) and len(stem) > 2:
+            # Exclude data visualization and analytics terms
+            data_viz_terms = {'pricing', 'trace', 'chart', 'graph', 'data', 'analytics',
+                              'report', 'metrics', 'dashboard', 'distribution', 'histogram',
+                              'timeline', 'funnel', 'heatmap', 'treemap', 'scatter', 'trend',
+                              'forecast', 'summary', 'overview', 'statistics', 'benchmark'}
+            if re.match(r'^[a-z]+$', stem) and len(stem) > 2 and stem not in data_viz_terms:
                 print(f"  ✓ Filename pattern: Game asset (single word)")
                 return ('game_assets', 'sprites', None, [])
+            # Pattern: data visualization single word
+            if re.match(r'^[a-z]+$', stem) and stem in data_viz_terms:
+                print(f"  ✓ Filename pattern: Data visualization")
+                return ('technical', 'data_visualization', None, [])
             # Pattern: ChatGPT images (ChatGPTImageNov1,2025,01_49_23AM.png)
             if stem.startswith('chatgptimage'):
                 print(f"  ✓ Filename pattern: ChatGPT AI-generated image")
@@ -2584,7 +2593,14 @@ class ContentBasedFileOrganizer:
                 print(f"  ✓ Filename pattern: Numbered variant")
                 return ('game_assets', 'sprites', None, [])
             # Pattern: hyphenated names (heart-beat.png, phone-call.png)
+            # Exclude data visualization hyphenated terms
+            data_viz_hyphenated = {'yearly-distribution', 'monthly-distribution', 'daily-distribution',
+                                   'cost-breakdown', 'revenue-chart', 'sales-report', 'time-series',
+                                   'bar-chart', 'pie-chart', 'line-graph', 'data-flow', 'user-stats'}
             if re.match(r'^[a-z]+-[a-z]+(-[a-z]+)*(_\d{8}_\d{6})?(-copy)?$', stem):
+                if stem in data_viz_hyphenated or any(term in stem for term in ['distribution', 'chart', 'graph', 'report', 'stats', 'analytics', 'metrics']):
+                    print(f"  ✓ Filename pattern: Data visualization")
+                    return ('technical', 'data_visualization', None, [])
                 print(f"  ✓ Filename pattern: Hyphenated asset")
                 return ('game_assets', 'sprites', None, [])
             # Pattern: two letters (dv.png, pv.png)
