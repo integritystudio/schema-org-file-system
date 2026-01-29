@@ -80,6 +80,8 @@ class ScreenshotAnalyzer:
             "a web browser screenshot",
             "a chat or messaging application",
             "a settings or preferences screen",
+            "an e-commerce or online shopping page",
+            "a product listing or retail website",
             # Characters
             "a game character sprite",
             "a warrior or knight character",
@@ -121,6 +123,8 @@ class ScreenshotAnalyzer:
             "a web browser screenshot": "Software/Browser",
             "a chat or messaging application": "Software/Chat",
             "a settings or preferences screen": "Software/Settings",
+            "an e-commerce or online shopping page": "Software/Shopping",
+            "a product listing or retail website": "Software/Shopping",
             # Game Characters
             "a game character sprite": "Characters/Generic",
             "a warrior or knight character": "Characters/Warriors",
@@ -158,6 +162,8 @@ class ScreenshotAnalyzer:
             "a web browser screenshot": "browser",
             "a chat or messaging application": "chat",
             "a settings or preferences screen": "settings",
+            "an e-commerce or online shopping page": "shop",
+            "a product listing or retail website": "product",
             # Game Characters
             "a game character sprite": "char",
             "a warrior or knight character": "warrior",
