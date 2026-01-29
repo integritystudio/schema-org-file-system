@@ -2807,6 +2807,18 @@ class ContentBasedFileOrganizer:
             return ('organization', 'other', 'Fisterra', [])
 
         # =========================================================
+        # LEGAL/CONTRACT DOCUMENTS: DPA, NDA, SLA, TOS, MSA, SOW
+        # Must check BEFORE event documents (dates in filenames)
+        # =========================================================
+        legal_keywords = ['dpa', 'nda', 'sla', 'tos', 'msa', 'sow', 'contract', 'agreement',
+                         'terms', 'privacy', 'policy', 'license', 'eula', 'gdpr', 'hipaa',
+                         'compliance', 'legal', 'addendum', 'amendment']
+        if ext in {'.pdf', '.docx', '.doc'}:
+            if any(kw in stem for kw in legal_keywords):
+                print(f"  ✓ Filename pattern: Legal/contract document")
+                return ('business', 'legal', None, [])
+
+        # =========================================================
         # EVENT DOCUMENTS: Oct25Event, Nov15Party (month+day in name)
         # =========================================================
         month_patterns = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
