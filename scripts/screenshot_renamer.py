@@ -82,6 +82,9 @@ class ScreenshotAnalyzer:
             "a settings or preferences screen",
             "an e-commerce or online shopping page",
             "a product listing or retail website",
+            "a documentation or technical guide page",
+            "a marketing or landing page website",
+            "an infographic or diagram with text",
             # Characters
             "a game character sprite",
             "a warrior or knight character",
@@ -125,6 +128,9 @@ class ScreenshotAnalyzer:
             "a settings or preferences screen": "Software/Settings",
             "an e-commerce or online shopping page": "Software/Shopping",
             "a product listing or retail website": "Software/Shopping",
+            "a documentation or technical guide page": "Software/Documentation",
+            "a marketing or landing page website": "Software/Marketing",
+            "an infographic or diagram with text": "Software/Infographics",
             # Game Characters
             "a game character sprite": "Characters/Generic",
             "a warrior or knight character": "Characters/Warriors",
@@ -164,6 +170,9 @@ class ScreenshotAnalyzer:
             "a settings or preferences screen": "settings",
             "an e-commerce or online shopping page": "shop",
             "a product listing or retail website": "product",
+            "a documentation or technical guide page": "docs",
+            "a marketing or landing page website": "landing",
+            "an infographic or diagram with text": "infographic",
             # Game Characters
             "a game character sprite": "char",
             "a warrior or knight character": "warrior",
