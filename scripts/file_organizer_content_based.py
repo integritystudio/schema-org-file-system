@@ -2478,6 +2478,15 @@ class ContentBasedFileOrganizer:
             camera_prefixes = ('pxl_', 'img_', 'dsc_', 'dcim_', 'dscn_', 'dscf_', 'p_', 'photo_')
             is_camera_photo = stem.startswith(camera_prefixes)
 
+            # EXCLUDE screenshot renamer software prefixes from game asset detection
+            # These are software screenshots renamed by screenshot_renamer.py
+            # Pattern: prefix_8hexchars (e.g., terminal_7a7c3ac6, browser_826a2e1f)
+            software_screenshot_pattern = re.match(
+                r'^(dashboard|terminal|code|browser|chat|settings|shop|product|docs|landing|infographic)_[a-f0-9]{8}$',
+                stem
+            )
+            is_software_screenshot = software_screenshot_pattern is not None
+
             # Pattern: purely numeric filename (0.png, 103.png, 42_8.png)
             if not is_camera_photo and re.match(r'^\d+(_\d+)*$', stem):
                 print(f"  ✓ Filename pattern: Numbered sprite")
@@ -2491,8 +2500,34 @@ class ContentBasedFileOrganizer:
             if not is_camera_photo and ('font' in stem or 'glyph' in stem or 'charset' in stem):
                 print(f"  ✓ Filename pattern: Font asset")
                 return ('game_assets', 'fonts', None, [])
+            # Pattern: software screenshot from screenshot_renamer.py
+            if is_software_screenshot:
+                if stem.startswith('dashboard_'):
+                    print(f"  ✓ Filename pattern: Software dashboard screenshot")
+                    return ('media', 'photos_screenshots', None, [])
+                elif stem.startswith('terminal_'):
+                    print(f"  ✓ Filename pattern: Terminal screenshot")
+                    return ('media', 'photos_screenshots', None, [])
+                elif stem.startswith('browser_'):
+                    print(f"  ✓ Filename pattern: Browser screenshot")
+                    return ('media', 'photos_screenshots', None, [])
+                elif stem.startswith('code_'):
+                    print(f"  ✓ Filename pattern: Code editor screenshot")
+                    return ('media', 'photos_screenshots', None, [])
+                elif stem.startswith('docs_'):
+                    print(f"  ✓ Filename pattern: Documentation screenshot")
+                    return ('media', 'photos_screenshots', None, [])
+                elif stem.startswith(('shop_', 'product_')):
+                    print(f"  ✓ Filename pattern: E-commerce screenshot")
+                    return ('media', 'photos_screenshots', None, [])
+                elif stem.startswith(('chat_', 'settings_')):
+                    print(f"  ✓ Filename pattern: App screenshot")
+                    return ('media', 'photos_screenshots', None, [])
+                elif stem.startswith(('landing_', 'infographic_')):
+                    print(f"  ✓ Filename pattern: Marketing screenshot")
+                    return ('business', 'marketing', None, [])
             # Pattern: name_hash.png (animal_57886bff.png, drop_2_6.png)
-            if not is_camera_photo and re.match(r'^[a-z]+(_[a-z0-9]+)+$', stem):
+            if not is_camera_photo and not is_software_screenshot and re.match(r'^[a-z]+(_[a-z0-9]+)+$', stem):
                 print(f"  ✓ Filename pattern: Game asset (named)")
                 return ('game_assets', 'sprites', None, [])
             # Pattern: _hash or _name (starts with underscore, like _RWOIsUgWGL.png)
