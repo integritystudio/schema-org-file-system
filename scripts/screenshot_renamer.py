@@ -73,6 +73,13 @@ class ScreenshotAnalyzer:
 
         # Define game asset categories for CLIP classification
         self.game_categories = [
+            # Software/App Screenshots (check first to avoid game misclassification)
+            "a software dashboard or admin panel",
+            "a terminal or command line interface",
+            "a code editor or IDE screenshot",
+            "a web browser screenshot",
+            "a chat or messaging application",
+            "a settings or preferences screen",
             # Characters
             "a game character sprite",
             "a warrior or knight character",
@@ -107,6 +114,14 @@ class ScreenshotAnalyzer:
 
         # Simplified categories for folder organization
         self.category_mapping = {
+            # Software/App Screenshots
+            "a software dashboard or admin panel": "Software/Dashboards",
+            "a terminal or command line interface": "Software/Terminal",
+            "a code editor or IDE screenshot": "Software/CodeEditors",
+            "a web browser screenshot": "Software/Browser",
+            "a chat or messaging application": "Software/Chat",
+            "a settings or preferences screen": "Software/Settings",
+            # Game Characters
             "a game character sprite": "Characters/Generic",
             "a warrior or knight character": "Characters/Warriors",
             "a dragon or monster sprite": "Characters/Monsters",
@@ -136,6 +151,14 @@ class ScreenshotAnalyzer:
 
         # Short name prefixes for renaming
         self.name_prefixes = {
+            # Software/App Screenshots
+            "a software dashboard or admin panel": "dashboard",
+            "a terminal or command line interface": "terminal",
+            "a code editor or IDE screenshot": "code",
+            "a web browser screenshot": "browser",
+            "a chat or messaging application": "chat",
+            "a settings or preferences screen": "settings",
+            # Game Characters
             "a game character sprite": "char",
             "a warrior or knight character": "warrior",
             "a dragon or monster sprite": "dragon",
