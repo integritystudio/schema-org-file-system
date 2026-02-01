@@ -94,17 +94,17 @@
                 <div class="card-title">➕ Add Correction</div>
                 <form id="correctionForm">
                     <div class="form-group">
-                        <label>File Path (original or current)</label>
-                        <input type="text" id="filePath" placeholder="/path/to/file.ext" required>
+                        <label for="filePath">File Path (original or current)</label>
+                        <input type="text" id="filePath" name="filePath" placeholder="/path/to/file.ext" required>
                     </div>
                     <div class="form-group">
-                        <label>Filename</label>
-                        <input type="text" id="filename" placeholder="file.ext" required>
+                        <label for="filename">Filename</label>
+                        <input type="text" id="filename" name="filename" placeholder="file.ext" required>
                     </div>
                     <div class="grid-2">
                         <div class="form-group">
-                            <label>Assigned Category (wrong)</label>
-                            <select id="assignedCategory" required>
+                            <label for="assignedCategory">Assigned Category (wrong)</label>
+                            <select id="assignedCategory" name="assignedCategory" required>
                                 <option value="">Select...</option>
                                 <option value="game_assets">Game Assets</option>
                                 <option value="media">Media</option>
@@ -120,8 +120,8 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Correct Category</label>
-                            <select id="correctCategory" required>
+                            <label for="correctCategory">Correct Category</label>
+                            <select id="correctCategory" name="correctCategory" required>
                                 <option value="">Select...</option>
                                 <option value="game_assets">Game Assets</option>
                                 <option value="media">Media</option>
@@ -139,21 +139,21 @@
                     </div>
                     <div class="grid-2">
                         <div class="form-group">
-                            <label>Assigned Subcategory</label>
-                            <input type="text" id="assignedSubcategory" placeholder="e.g., sprites, photos_other">
+                            <label for="assignedSubcategory">Assigned Subcategory</label>
+                            <input type="text" id="assignedSubcategory" name="assignedSubcategory" placeholder="e.g., sprites, photos_other">
                         </div>
                         <div class="form-group">
-                            <label>Correct Subcategory</label>
-                            <input type="text" id="correctSubcategory" placeholder="e.g., textures, photos_social">
+                            <label for="correctSubcategory">Correct Subcategory</label>
+                            <input type="text" id="correctSubcategory" name="correctSubcategory" placeholder="e.g., textures, photos_social">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Reason for Correction</label>
-                        <textarea id="reason" rows="2" placeholder="Why was this file miscategorized?"></textarea>
+                        <label for="reason">Reason for Correction</label>
+                        <textarea id="reason" name="reason" rows="2" placeholder="Why was this file miscategorized?"></textarea>
                     </div>
                     <div class="form-group">
-                        <label>Content Hints (comma-separated keywords)</label>
-                        <input type="text" id="contentHints" placeholder="keyword1, keyword2, keyword3">
+                        <label for="contentHints">Content Hints (comma-separated keywords)</label>
+                        <input type="text" id="contentHints" name="contentHints" placeholder="keyword1, keyword2, keyword3">
                     </div>
                     <button type="submit" class="btn btn-primary" style="width: 100%;">Add Correction</button>
                 </form>
@@ -195,7 +195,8 @@
                 Import corrections from a JSON file or paste JSON directly.
             </p>
             <div class="form-group">
-                <textarea id="importJson" rows="4" placeholder='{"corrections": {...}, "learned_patterns": {...}}'></textarea>
+                <label for="importJson">JSON Data</label>
+                <textarea id="importJson" name="importJson" rows="4" placeholder='{"corrections": {...}, "learned_patterns": {...}}'></textarea>
             </div>
             <button class="btn btn-primary" onclick="importCorrections()">Import</button>
         </div>
