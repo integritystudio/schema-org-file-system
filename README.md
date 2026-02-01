@@ -122,3 +122,165 @@ flowchart LR
 | No OCR | `brew install tesseract` |
 | No AI | `pip install torch transformers` |
 | Check deps | `organize-files health` |
+
+## Visual Architecture
+
+### System Overview
+
+```mermaid
+flowchart TB
+    subgraph Input
+        U[User] --> CLI[organize-files CLI]
+        F[Source Files] --> CLI
+    end
+
+    subgraph Processing["Processing Pipeline"]
+        CLI --> CO{Organizer Type}
+        CO -->|content| AI[AI Organizer]
+        CO -->|name| NM[Name Organizer]
+        CO -->|type| TY[Type Organizer]
+
+        AI --> CLIP[CLIP Vision]
+        AI --> OCR[Tesseract OCR]
+        AI --> ED[Entity Detection]
+        AI --> GAD[Game Asset Detection]
+        AI --> LCD[Legal/Contract]
+        AI --> ECD[E-commerce]
+        AI --> SUI[Software UI]
+    end
+
+    subgraph Storage
+        CLIP & OCR & ED & GAD & LCD & ECD & SUI --> GS[GraphStore]
+        GS --> DB[(SQLite)]
+        GS --> JSON[Schema.org JSON-LD]
+    end
+
+    subgraph Output
+        DB --> DASH[Web Dashboard]
+        JSON --> DASH
+        DB --> RPT[Reports]
+    end
+
+    subgraph Monitoring
+        AI -.-> SENTRY[Sentry]
+        AI -.-> COST[Cost Tracker]
+    end
+
+    subgraph External
+        CLIP -.-> HF[HuggingFace]
+        ED -.-> NOM[Nominatim]
+    end
+```
+
+### Database Schema
+
+```mermaid
+erDiagram
+    File ||--o{ FileCategory : has
+    File ||--o{ FileCompany : has
+    File ||--o{ FilePerson : has
+    File ||--o{ FileLocation : has
+    File ||--o{ FileRelationship : source
+    File ||--o{ FileRelationship : target
+    File }o--|| OrganizationSession : belongs_to
+
+    File {
+        string id PK "SHA-256"
+        string canonical_id "UUID v5"
+        string filename
+        string original_path
+        string current_path
+        enum status
+        string schema_type
+        string content_hash
+    }
+
+    Category {
+        int id PK
+        string canonical_id
+        string name
+        int parent_id FK
+        string full_path
+    }
+
+    Company {
+        int id PK
+        string canonical_id
+        string name
+        string normalized_name
+        string domain
+    }
+
+    Person {
+        int id PK
+        string canonical_id
+        string name
+        string email
+        string role
+    }
+
+    Location {
+        int id PK
+        string canonical_id
+        string city
+        string state
+        float lat
+        float lng
+    }
+
+    OrganizationSession {
+        uuid id PK
+        datetime started_at
+        int total_files
+        float total_cost
+    }
+
+    CostRecord {
+        int id PK
+        uuid session_id FK
+        string file_id FK
+        string feature_name
+        float processing_time
+        float cost
+    }
+```
+
+### Module Dependencies
+
+```mermaid
+graph TB
+    subgraph CLI
+        cli[src/cli.py]
+    end
+
+    subgraph Scripts
+        foc[file_organizer_content_based.py]
+        icr[image_content_renamer.py]
+        ica[image_content_analyzer.py]
+    end
+
+    subgraph Core
+        gen[generators.py]
+        err[error_tracking.py]
+        cost[cost_roi_calculator.py]
+    end
+
+    subgraph Storage
+        gs[graph_store.py]
+        models[models.py]
+    end
+
+    subgraph External
+        torch[PyTorch/CLIP]
+        tess[Tesseract]
+        sentry[Sentry SDK]
+        sa[SQLAlchemy]
+    end
+
+    cli --> foc
+    foc --> gen & err & cost & gs
+    icr & ica --> torch
+    gs --> models --> sa
+    err --> sentry
+    foc --> torch & tess
+```
