@@ -1,7 +1,7 @@
 # Schema.org File Organization System - Codebase Analysis
 
-**Generated:** 2025-12-13
-**Version:** 1.3.0
+**Generated:** 2026-02-01
+**Version:** 1.4.0
 **Python:** 3.8 - 3.14
 
 ---
@@ -42,11 +42,11 @@ Database (SQLite)
 ### Key Metrics
 | Metric | Value |
 |--------|-------|
-| Files Processed | 72,978+ |
+| Files Processed | 265,000+ |
 | Success Rate | 98.6% |
 | Top Category | GameAssets (84.8%) |
-| Source Files | 40+ Python files |
-| Test Files | 15+ test modules |
+| Source Files | 41+ Python files |
+| Test Files | 20+ test modules |
 
 ---
 
@@ -74,10 +74,12 @@ schema-org-file-system/
 │       ├── kv_store.py           # Key-value storage
 │       └── migration.py          # Database migrations
 │
-├── scripts/                      # Executable scripts (21 files)
+├── scripts/                      # Executable scripts (23 files)
 │   ├── file_organizer_content_based.py  # Main AI organizer
 │   ├── file_organizer_by_name.py        # Name-based organizer
 │   ├── file_organizer_by_type.py        # Extension-based organizer
+│   ├── image_content_renamer.py         # CLIP-based image renaming
+│   ├── image_content_analyzer.py        # Image content analysis
 │   ├── correction_feedback.py           # User correction system
 │   ├── data_preprocessing.py            # ML training prep
 │   ├── evaluate_model.py                # Model evaluation
@@ -92,6 +94,7 @@ schema-org-file-system/
 │   ├── conftest.py               # Pytest fixtures
 │   ├── unit/                     # Unit tests
 │   ├── integration/              # Integration tests
+│   ├── e2e/                      # E2E tests (Playwright + OpenTelemetry)
 │   └── fixtures/                 # Test data fixtures
 │
 ├── _site/                        # Dashboard UI (GitHub Pages)
@@ -332,11 +335,20 @@ Value = (Manual Time Saved × Files Classified) × Hourly Rate ($25/hr)
 
 **Classification Priority:**
 1. Organization Detection (keywords: client, vendor, invoice)
-2. Person Detection (keywords: resume, contact, signatures)
-3. Game Asset Detection (200+ patterns, numbered sprites)
-4. Filepath Matching (directory structure)
-5. Content Analysis (OCR + CLIP)
-6. MIME Type Fallback (extension)
+2. Person Detection (keywords: resume, contact, signatures, OCR-enhanced)
+3. Legal/Contract Detection (contracts, agreements, terms)
+4. E-commerce/Shopping Detection (product listings, carts)
+5. Software UI Detection (app interfaces, dashboards)
+6. Game Asset Detection (200+ patterns, numbered sprites, audio)
+7. Filepath Matching (directory structure)
+8. Content Analysis (OCR + CLIP)
+9. MIME Type Fallback (extension)
+
+**Additional Categories:**
+- Marketing/Infographic - promotional content, data visualizations
+- Docs/Documentation - technical docs, guides
+- CRM/HR/Meeting Notes - business subcategories
+- Source-based Photos - camera roll, screenshots by source
 
 ---
 
@@ -355,9 +367,34 @@ Value = (Manual Time Saved × Files Classified) × Hourly Rate ($25/hr)
 #### `scripts/regenerate_schemas.py`
 **Purpose:** Rebuild Schema.org metadata.
 
+#### `scripts/image_content_renamer.py`
+**Purpose:** CLIP vision-based image renaming with category and description output.
+
+#### `scripts/image_content_analyzer.py`
+**Purpose:** Analyze images using CLIP to generate object IDs, categories, and descriptions.
+
 ---
 
 ### Tests (`tests/`)
+
+#### E2E Tests (`tests/e2e/`)
+**Purpose:** End-to-end testing with Playwright and OpenTelemetry instrumentation.
+
+**Test Files:**
+| File | Coverage |
+|------|----------|
+| `dashboard.spec.ts` | Main dashboard functionality |
+| `timeline.spec.ts` | Timeline visualization |
+| `metadata-viewer.spec.ts` | Metadata browser |
+| `correction-interface.spec.ts` | User correction UI |
+
+**Fixtures:**
+- `otel-tracing.ts` - OpenTelemetry instrumentation
+- `performance.ts` - Performance metrics collection
+- `har-recording.ts` - Network traffic recording
+- `traffic-tracking.ts` - Request tracking
+
+---
 
 #### `tests/conftest.py` (226 lines)
 **Purpose:** Pytest fixtures and configuration.
@@ -738,6 +775,8 @@ pip install -e .
 | pytest-mock | Mocking |
 | Faker | Test data |
 | Hypothesis | Property testing |
+| Playwright | E2E browser testing |
+| OpenTelemetry | E2E observability/tracing |
 
 ---
 
@@ -951,15 +990,16 @@ pip install -e .
 | Category | Count | Lines (est.) |
 |----------|-------|--------------|
 | Core Library (`src/`) | 18 files | ~5,500 |
-| Scripts (`scripts/`) | 21 files | ~4,000 |
-| Tests (`tests/`) | 15+ files | ~1,500 |
-| Total Python | 54+ files | ~11,000 |
+| Scripts (`scripts/`) | 23 files | ~5,500 |
+| Tests - Python (`tests/`) | 12 files | ~1,500 |
+| Tests - E2E (`tests/e2e/`) | 8 files | ~1,600 |
+| Total | 61+ files | ~14,100 |
 
 ### Database Statistics
 | Table | Purpose | Records |
 |-------|---------|---------|
-| files | Processed files | 72,978+ |
-| categories | Classification | ~20 |
+| files | Processed files | 265,000+ |
+| categories | Classification | ~25 |
 | companies | Organizations | ~500 |
 | people | Individuals | ~200 |
 | locations | Geographic | ~100 |
@@ -976,4 +1016,4 @@ pip install -e .
 
 ---
 
-*This analysis was generated for the Schema.org File Organization System v1.3.0*
+*This analysis was generated for the Schema.org File Organization System v1.4.0*
