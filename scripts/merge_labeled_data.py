@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
 
-from shared.db_utils import get_db_connection
+from shared.db_utils import db_connection
 
 
 def get_labeling_session_data(db_path: str, ml_session: str) -> List[Dict]:
@@ -28,61 +28,59 @@ def get_labeling_session_data(db_path: str, ml_session: str) -> List[Dict]:
     Returns:
         List of file records with labels
     """
-    conn = get_db_connection(db_path)
-    cursor = conn.cursor()
-
-    query = """
-    SELECT
-        f.original_path,
-        f.filename,
-        f.file_extension,
-        f.mime_type,
-        f.file_size,
-        f.schema_type,
-        f.extracted_text,
-        f.extracted_text_length,
-        c.name as subcategory,
-        c.full_path as full_category_path,
-        f.session_id
-    FROM files f
-    JOIN file_categories fc ON f.id = fc.file_id
-    JOIN categories c ON fc.category_id = c.id
-    WHERE f.session_id <> ?
-    """
-
-    cursor.execute(query, (ml_session,))
-
     records = []
-    for row in cursor.fetchall():
-        full_path = row['full_category_path'] or ''
-        parts = full_path.split('/') if full_path else []
-        parent_category = parts[0] if parts else row['subcategory']
+    with db_connection(db_path) as conn:
+        cursor = conn.cursor()
 
-        record = {
-            'source': row['original_path'],
-            'status': 'organized',
-            'reason': None,
-            'destination': row['original_path'],  # Use original path as destination
-            'schema': {
-                '@context': 'https://schema.org',
-                '@type': row['schema_type'] or 'DigitalDocument',
-                'name': row['filename'],
-                'description': row['filename'],
-                'filePath': row['original_path']
-            },
-            'extracted_text_length': row['extracted_text_length'] or 0,
-            'company_name': None,
-            'people_names': [],
-            'image_metadata': {},
-            'category': parent_category,
-            'subcategory': row['subcategory'],
-            'is_valid': True,
-            'label_source': 'manual_labeling',
-            'session_id': row['session_id']
-        }
-        records.append(record)
+        query = """
+        SELECT
+            f.original_path,
+            f.filename,
+            f.file_extension,
+            f.mime_type,
+            f.file_size,
+            f.schema_type,
+            f.extracted_text,
+            f.extracted_text_length,
+            c.name as subcategory,
+            c.full_path as full_category_path,
+            f.session_id
+        FROM files f
+        JOIN file_categories fc ON f.id = fc.file_id
+        JOIN categories c ON fc.category_id = c.id
+        WHERE f.session_id <> ?
+        """
 
-    conn.close()
+        cursor.execute(query, (ml_session,))
+
+        for row in cursor.fetchall():
+            full_path = row['full_category_path'] or ''
+            parts = full_path.split('/') if full_path else []
+            parent_category = parts[0] if parts else row['subcategory']
+
+            records.append({
+                'source': row['original_path'],
+                'status': 'organized',
+                'reason': None,
+                'destination': row['original_path'],  # Use original path as destination
+                'schema': {
+                    '@context': 'https://schema.org',
+                    '@type': row['schema_type'] or 'DigitalDocument',
+                    'name': row['filename'],
+                    'description': row['filename'],
+                    'filePath': row['original_path']
+                },
+                'extracted_text_length': row['extracted_text_length'] or 0,
+                'company_name': None,
+                'people_names': [],
+                'image_metadata': {},
+                'category': parent_category,
+                'subcategory': row['subcategory'],
+                'is_valid': True,
+                'label_source': 'manual_labeling',
+                'session_id': row['session_id']
+            })
+
     return records
 
 

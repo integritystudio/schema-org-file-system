@@ -4,8 +4,6 @@ Organize content-described files into existing Schema.org folder structure.
 Maps content types to existing folders in ~/Documents.
 """
 
-import os
-import sys
 import json
 import shutil
 from pathlib import Path
@@ -24,18 +22,6 @@ def organize_files(base_path: str = "~/Documents", dry_run: bool = False) -> dic
     """Organize files from ~/Documents root into existing subfolders."""
 
     base_path = Path(base_path).expanduser()
-
-    # Load the content rename log to get content types
-    log_file = Path(__file__).parent.parent / 'results' / 'content_rename_log.json'
-    with open(log_file, 'r') as f:
-        rename_data = json.load(f)
-
-    # Build mapping of filename to content type
-    filename_to_content = {}
-    for item in rename_data['log']:
-        # Get the final filename (after all renames)
-        final_name = Path(item['new']).name
-        filename_to_content[final_name] = item.get('content_type')
 
     print(f"\n{'='*60}")
     print(f"Organizing Files to Existing Folders {'(DRY RUN)' if dry_run else ''}")

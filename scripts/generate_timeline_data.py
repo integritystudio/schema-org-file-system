@@ -161,7 +161,11 @@ def get_cumulative_stats() -> dict[str, Any]:
             WHERE session_id IS NOT NULL
         """)
 
-        stats = dict(cursor.fetchone())
+        row = cursor.fetchone()
+        stats = dict(row) if row else {
+            'total_sessions': 0, 'total_files': 0,
+            'total_organized': 0, 'avg_processing_time': None,
+        }
 
         # Get category totals
         cursor.execute("""

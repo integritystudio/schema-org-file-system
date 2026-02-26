@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-from shared.db_utils import get_db_connection
+from shared.db_utils import db_connection
 
 
 def compute_file_id(filepath: str) -> str:
@@ -35,36 +35,35 @@ def get_labeled_categories(db_path: str, ml_session: str) -> Tuple[Dict, Dict]:
     Returns:
         Tuple of (path_dict, filename_dict) mapping to category info
     """
-    conn = get_db_connection(db_path, row_factory=False)
-    cursor = conn.cursor()
-
-    # Get ONLY labeling session data (manual corrections)
-    # These are the ground truth labels from human review
-    query_labeling = """
-    SELECT f.original_path, f.filename, c.name, c.full_path
-    FROM files f
-    JOIN file_categories fc ON f.id = fc.file_id
-    JOIN categories c ON fc.category_id = c.id
-    WHERE f.session_id <> ?
-    """
-
-    cursor.execute(query_labeling, (ml_session,))
-
     labeled_by_path = {}
     labeled_by_filename = {}
-    for row in cursor.fetchall():
-        original_path, filename, category_name, full_path = row
-        parts = full_path.split('/') if full_path else []
-        parent_category = parts[0] if parts else category_name
+    with db_connection(db_path, row_factory=False) as conn:
+        cursor = conn.cursor()
 
-        labeled_by_path[original_path] = (category_name, full_path, parent_category)
-        # Index by filename for matching moved files
-        labeled_by_filename[filename] = (category_name, full_path, parent_category)
+        # Get ONLY labeling session data (manual corrections)
+        # These are the ground truth labels from human review
+        query_labeling = """
+        SELECT f.original_path, f.filename, c.name, c.full_path
+        FROM files f
+        JOIN file_categories fc ON f.id = fc.file_id
+        JOIN categories c ON fc.category_id = c.id
+        WHERE f.session_id <> ?
+        """
+
+        cursor.execute(query_labeling, (ml_session,))
+
+        for row in cursor.fetchall():
+            original_path, filename, category_name, full_path = row
+            parts = full_path.split('/') if full_path else []
+            parent_category = parts[0] if parts else category_name
+
+            labeled_by_path[original_path] = (category_name, full_path, parent_category)
+            # Index by filename for matching moved files
+            labeled_by_filename[filename] = (category_name, full_path, parent_category)
 
     print(f"  - Labeling session records: {len(labeled_by_path)}")
     print(f"  - Unique filenames: {len(labeled_by_filename)}")
 
-    conn.close()
     return labeled_by_path, labeled_by_filename
 
 
