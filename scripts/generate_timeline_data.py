@@ -5,20 +5,14 @@ Queries the SQLite database and creates a JSON file for the frontend.
 """
 
 import json
-import sqlite3
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-DB_PATH = Path(__file__).parent.parent / "results" / "file_organization.db"
+from shared.db_utils import get_db_connection, DEFAULT_DB_PATH
+
+DB_PATH = DEFAULT_DB_PATH
 OUTPUT_PATH = Path(__file__).parent.parent / "_site" / "timeline_data.json"
-
-
-def get_db_connection() -> sqlite3.Connection:
-    """Get a connection to the SQLite database."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 
 def get_sessions() -> list[dict[str, Any]]:

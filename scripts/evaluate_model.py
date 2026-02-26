@@ -14,53 +14,20 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Any
 from collections import Counter, defaultdict
 
+from shared.constants import (
+    GAME_AUDIO_KEYWORDS, GAME_MUSIC_KEYWORDS, GAME_SPRITE_KEYWORDS,
+    SCREENSHOT_PATTERNS, DOCUMENT_PATTERNS,
+)
+
 
 class FileCategorizationModel:
     """Simulates the categorization logic from file_organizer_content_based.py"""
 
-    # Game asset keywords (from file_organizer_content_based.py)
-    GAME_AUDIO_KEYWORDS = [
-        'bolt', 'spell', 'magic', 'sword', 'dagger', 'arrow', 'attack', 'damage',
-        'lightning', 'fire', 'ice', 'acid', 'poison', 'heal', 'summon', 'dispel',
-        'door', 'chest', 'coin', 'pickup', 'unlock', 'lock', 'fiddle', 'lute',
-        'mandoline', 'glockenspiel', 'sfx', 'sound', 'effect', 'ambient'
-    ]
-
-    GAME_MUSIC_KEYWORDS = [
-        'battle', 'boss', 'dungeon', 'castle', 'forest', 'town', 'cave', 'temple',
-        'victory', 'defeat', 'chaos', 'hope', 'despair', 'triumph', 'mysterious',
-        'drakalor', 'altar', 'dwarven', 'elven', 'clockwork', 'theme', 'bgm',
-        'soundtrack', 'music', 'loop'
-    ]
-
-    GAME_SPRITE_KEYWORDS = [
-        'frame', 'leg', 'arm', 'head', 'torso', 'wing', 'tail', 'face', 'hand',
-        'wall', 'floor', 'door', 'window', 'tree', 'rock', 'grass', 'sprite',
-        'sword', 'shield', 'armor', 'potion', 'scroll', 'coin', 'gem', 'item',
-        'icon', 'button', 'menu', 'cursor', 'bar', 'container', 'tile',
-        'character', 'enemy', 'npc', 'player', 'walk', 'run', 'idle', 'attack',
-        'hurt', 'dead', 'angry', 'happy', 'sad', 'shoulder', 'body', 'feet'
-    ]
-
-    SCREENSHOT_PATTERNS = [
-        r'screenshot',
-        r'screen\s*shot',
-        r'screen_\d+',
-        r'capture',
-        r'snip',
-    ]
-
-    DOCUMENT_PATTERNS = [
-        r'invoice', r'receipt', r'contract',
-        r'report', r'statement', r'tax',
-        r'resume', r'cv', r'letter',
-    ]
-
     def __init__(self):
         self.all_game_keywords = set(
-            self.GAME_AUDIO_KEYWORDS +
-            self.GAME_MUSIC_KEYWORDS +
-            self.GAME_SPRITE_KEYWORDS
+            GAME_AUDIO_KEYWORDS +
+            GAME_MUSIC_KEYWORDS +
+            GAME_SPRITE_KEYWORDS
         )
 
     def predict_category(self, feature: Dict) -> Tuple[str, str, float]:
@@ -76,7 +43,7 @@ class FileCategorizationModel:
         extension_category = feature.get('extension_category', '')
 
         # Check for screenshots first
-        if self._matches_patterns(filename, self.SCREENSHOT_PATTERNS):
+        if self._matches_patterns(filename, SCREENSHOT_PATTERNS):
             if extension in ['.png', '.jpg', '.jpeg']:
                 return ('media', 'photos_screenshots', 0.95)
 
@@ -87,7 +54,7 @@ class FileCategorizationModel:
             return ('game_assets', subcategory, game_score)
 
         # Check for documents
-        if self._matches_patterns(filename, self.DOCUMENT_PATTERNS):
+        if self._matches_patterns(filename, DOCUMENT_PATTERNS):
             return ('legal', 'other', 0.7)
 
         # Media files
@@ -140,8 +107,8 @@ class FileCategorizationModel:
         # Audio files
         if extension in ['.wav', '.ogg', '.mp3']:
             # Check for music keywords
-            music_matches = sum(1 for t in tokens_lower if t in self.GAME_MUSIC_KEYWORDS)
-            audio_matches = sum(1 for t in tokens_lower if t in self.GAME_AUDIO_KEYWORDS)
+            music_matches = sum(1 for t in tokens_lower if t in GAME_MUSIC_KEYWORDS)
+            audio_matches = sum(1 for t in tokens_lower if t in GAME_AUDIO_KEYWORDS)
 
             if music_matches > audio_matches:
                 return 'music'

@@ -11,29 +11,8 @@ import re
 from pathlib import Path
 from collections import defaultdict
 
-# Content type to short description mapping
-CONTENT_ABBREVIATIONS = {
-    "an animal or pet": "pet",
-    "a meme or social media image": "meme",
-    "a logo or brand image": "logo",
-    "a game or entertainment": "game",
-    "artwork or illustration": "art",
-    "a document or text": "doc",
-    "screenshot: a computer screen": "screenshot",
-    "screenshot: a mobile phone": "mobile",
-    "a diagram or chart": "chart",
-    "people or portrait": "portrait",
-    "a product or object": "product",
-    "an interior room": "interior",
-    "food or a meal": "food",
-    "a landscape or nature scene": "landscape",
-    "a cityscape or urban scene": "cityscape",
-    "a vehicle or transportation": "vehicle",
-    "a building or architecture": "building",
-    "an event or celebration": "event",
-    "sports or physical activity": "sports",
-    "abstract art or pattern": "abstract",
-}
+from shared.constants import CONTENT_ABBREVIATIONS
+from shared.file_ops import resolve_collision
 
 
 def sanitize_for_filename(text: str, max_length: int = 30) -> str:
@@ -181,13 +160,8 @@ def rename_with_descriptions(analysis_file: str, dry_run: bool = False) -> dict:
 
         # Handle collisions
         if new_path.exists() and new_path != original_path:
-            counter = 1
-            stem = Path(new_name).stem
-            ext = Path(new_name).suffix
-            while new_path.exists():
-                new_name = f"{stem}_{counter}{ext}"
-                new_path = original_path.parent / new_name
-                counter += 1
+            new_path = resolve_collision(new_path)
+            new_name = new_path.name
 
         # Perform rename
         try:

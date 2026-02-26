@@ -22,30 +22,18 @@ from typing import Dict, List, Optional, Tuple, Any
 from collections import Counter, defaultdict
 import unicodedata
 
+from shared.constants import SCREENSHOT_PATTERNS, DOCUMENT_PATTERNS
+
+# Game asset patterns for filename matching (subset of game keywords as regex)
+GAME_ASSET_PATTERNS = [
+    r'sprite', r'frame', r'tile', r'texture',
+    r'audio', r'sfx', r'bgm', r'music',
+    r'icon', r'button', r'ui_',
+]
+
 
 class FileFeatureExtractor:
     """Extract ML features from file metadata."""
-
-    # Common patterns for categorization
-    SCREENSHOT_PATTERNS = [
-        r'screenshot',
-        r'screen\s*shot',
-        r'screen_\d+',
-        r'capture',
-        r'snip',
-    ]
-
-    GAME_ASSET_PATTERNS = [
-        r'sprite', r'frame', r'tile', r'texture',
-        r'audio', r'sfx', r'bgm', r'music',
-        r'icon', r'button', r'ui_',
-    ]
-
-    DOCUMENT_PATTERNS = [
-        r'invoice', r'receipt', r'contract',
-        r'report', r'statement', r'tax',
-        r'resume', r'cv', r'letter',
-    ]
 
     def __init__(self):
         self.extension_map = self._build_extension_map()
@@ -107,9 +95,9 @@ class FileFeatureExtractor:
             'starts_with_date': self._starts_with_date(filename),
 
             # Pattern detection
-            'is_screenshot': self._matches_patterns(filename, self.SCREENSHOT_PATTERNS),
-            'is_game_asset': self._matches_patterns(filename, self.GAME_ASSET_PATTERNS),
-            'is_document': self._matches_patterns(filename, self.DOCUMENT_PATTERNS),
+            'is_screenshot': self._matches_patterns(filename, SCREENSHOT_PATTERNS),
+            'is_game_asset': self._matches_patterns(filename, GAME_ASSET_PATTERNS),
+            'is_document': self._matches_patterns(filename, DOCUMENT_PATTERNS),
 
             # Metadata features
             'has_extracted_text': file_record.get('extracted_text_length', 0) > 0,

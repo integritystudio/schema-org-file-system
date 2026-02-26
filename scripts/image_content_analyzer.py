@@ -13,20 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Tuple, Dict
 
-try:
-    import torch
-    from transformers import CLIPProcessor, CLIPModel
-    from PIL import Image
-    CLIP_AVAILABLE = True
-except ImportError:
-    CLIP_AVAILABLE = False
-    print("Error: CLIP not available. Install torch and transformers.")
-
-try:
-    from pillow_heif import register_heif_opener
-    register_heif_opener()
-except ImportError:
-    pass
+from shared.clip_utils import CLIPClassifier, CLIP_AVAILABLE
 
 
 # Namespace for UUID v5 generation (deterministic IDs)
@@ -210,7 +197,7 @@ ROOM_TYPES = {
 }
 
 
-def analyze_image(image_path: Path, model, processor, device) -> List[Tuple[str, float]]:
+def analyze_image(image_path: Path, classifier: CLIPClassifier) -> List[Tuple[str, float]]:
     """
     Analyze image and return all object categories with confidence scores.
     Excludes room types.
@@ -218,35 +205,8 @@ def analyze_image(image_path: Path, model, processor, device) -> List[Tuple[str,
     Returns:
         List of (object_name, confidence) tuples sorted by confidence descending
     """
-    image = Image.open(image_path).convert("RGB")
-
-    # Only analyze objects in our catalog (excludes room types)
     object_names = list(OBJECT_CATALOG.keys())
-    text_inputs = [f"a photo of {obj}" for obj in object_names]
-
-    inputs = processor(
-        text=text_inputs,
-        images=image,
-        return_tensors="pt",
-        padding=True
-    )
-    inputs = {k: v.to(device) for k, v in inputs.items()}
-
-    with torch.no_grad():
-        outputs = model(**inputs)
-        logits = outputs.logits_per_image
-        probs = logits.softmax(dim=1)
-
-    # Create list of (object_name, confidence) pairs
-    results = []
-    for i, obj in enumerate(object_names):
-        confidence = probs[0][i].item()
-        results.append((obj, confidence))
-
-    # Sort by confidence descending
-    results.sort(key=lambda x: x[1], reverse=True)
-
-    return results
+    return classifier.classify(image_path, object_names)
 
 
 def generate_csv(image_path: Path, output_path: Path, min_confidence: float = 0.0):
@@ -256,16 +216,10 @@ def generate_csv(image_path: Path, output_path: Path, min_confidence: float = 0.
         print("Error: CLIP not available")
         return
 
-    print(f"Loading CLIP model...")
-    device = "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu"
-    model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
-    processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-    model.to(device)
-    model.eval()
-    print(f"✓ Model loaded (device: {device})")
+    classifier = CLIPClassifier()
 
     print(f"\nAnalyzing: {image_path.name}")
-    results = analyze_image(image_path, model, processor, device)
+    results = analyze_image(image_path, classifier)
 
     # Filter by minimum confidence
     if min_confidence > 0:

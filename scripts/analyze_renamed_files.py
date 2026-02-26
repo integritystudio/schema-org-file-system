@@ -14,33 +14,9 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 from collections import defaultdict
 
-# Add src directory to path (portable)
-sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
-
-# OCR imports
-try:
-    import pytesseract
-    from PIL import Image
-    OCR_AVAILABLE = True
-
-    # HEIC support
-    try:
-        from pillow_heif import register_heif_opener
-        register_heif_opener()
-    except ImportError:
-        pass
-except ImportError:
-    OCR_AVAILABLE = False
-    print("Warning: OCR not available. Install pytesseract, Pillow")
-
-# Vision imports
-try:
-    from transformers import CLIPProcessor, CLIPModel
-    import torch
-    VISION_AVAILABLE = True
-except ImportError:
-    VISION_AVAILABLE = False
-    print("Warning: Vision analysis not available. Install transformers, torch")
+from shared.clip_utils import CLIPClassifier, CLIP_AVAILABLE
+from shared.ocr_utils import extract_ocr_text, is_ocr_available
+from shared.constants import CLIP_CATEGORY_PROMPTS, IMAGE_EXTENSIONS
 
 
 class RenamedFileAnalyzer:
@@ -54,45 +30,16 @@ class RenamedFileAnalyzer:
         r'^Screenshot_.*\.(jpg|jpeg|png|webp|gif|bmp|heic)$',  # Screenshot_*.png
     ]
 
-    # CLIP categories for image classification
-    CLIP_CATEGORIES = [
-        # Scene types
-        "a photo of a landscape or nature scene",
-        "a photo of a cityscape or urban scene",
-        "a photo of an interior room",
-        "a photo of food or a meal",
-        "a photo of people or portrait",
-        "a photo of an animal or pet",
-        "a photo of a document or text",
-        "a photo of artwork or illustration",
-        "a photo of a product or object",
-        "a photo of a vehicle or transportation",
-        "a screenshot of a computer screen",
-        "a screenshot of a mobile phone",
-        "a photo of a building or architecture",
-        "a photo of an event or celebration",
-        "a photo of sports or physical activity",
-        "a photo of a game or entertainment",
-        "a diagram or chart",
-        "a meme or social media image",
-        "a logo or brand image",
-        "abstract art or pattern",
-    ]
-
     def __init__(self):
         """Initialize analyzer with OCR and CLIP models."""
-        self.ocr_available = OCR_AVAILABLE
-        self.vision_available = VISION_AVAILABLE
-        self.model = None
-        self.processor = None
+        self.ocr_available = is_ocr_available()
+        self.vision_available = CLIP_AVAILABLE
+        self.classifier = None
         self.stats = defaultdict(int)
 
         if self.vision_available:
             try:
-                print("Loading CLIP model for image analysis...")
-                self.model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
-                self.processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-                print("CLIP model loaded successfully")
+                self.classifier = CLIPClassifier()
             except Exception as e:
                 print(f"Warning: Could not load CLIP model: {e}")
                 self.vision_available = False
@@ -104,66 +51,23 @@ class RenamedFileAnalyzer:
                 return True
         return False
 
-    def extract_ocr_text(self, image_path: Path, max_chars: int = 500) -> Optional[str]:
-        """Extract text from image using OCR."""
-        if not self.ocr_available:
-            return None
-
-        try:
-            img = Image.open(image_path)
-
-            # Convert to RGB if necessary
-            if img.mode != 'RGB':
-                img = img.convert('RGB')
-
-            text = pytesseract.image_to_string(img, timeout=10)
-
-            # Clean up text
-            text = ' '.join(text.split())
-
-            if len(text) > max_chars:
-                text = text[:max_chars] + "..."
-
-            return text if text.strip() else None
-
-        except Exception as e:
-            return None
-
     def classify_with_clip(self, image_path: Path) -> Optional[Dict[str, float]]:
         """Classify image content using CLIP."""
-        if not self.vision_available or self.model is None:
+        if not self.vision_available or self.classifier is None:
             return None
 
         try:
-            image = Image.open(image_path)
+            raw_results = self.classifier.classify_raw(image_path, CLIP_CATEGORY_PROMPTS)
 
-            # Convert to RGB if necessary
-            if image.mode != 'RGB':
-                image = image.convert('RGB')
-
-            # Process image with CLIP
-            inputs = self.processor(
-                text=self.CLIP_CATEGORIES,
-                images=image,
-                return_tensors="pt",
-                padding=True
-            )
-
-            with torch.no_grad():
-                outputs = self.model(**inputs)
-                logits_per_image = outputs.logits_per_image
-                probs = logits_per_image.softmax(dim=1)
-
-            # Get results
+            # Clean up category names for display
             results = {}
-            for i, category in enumerate(self.CLIP_CATEGORIES):
-                # Clean up category name for display
-                clean_name = category.replace("a photo of ", "").replace("a screenshot of ", "screenshot: ")
-                results[clean_name] = float(probs[0][i])
+            for prompt, confidence in raw_results:
+                clean_name = prompt.replace("a photo of ", "").replace("a screenshot of ", "screenshot: ")
+                results[clean_name] = confidence
 
             return results
 
-        except Exception as e:
+        except Exception:
             return None
 
     def get_top_classifications(self, classifications: Dict[str, float], top_n: int = 3, threshold: float = 0.1) -> List[Tuple[str, float]]:
@@ -198,7 +102,7 @@ class RenamedFileAnalyzer:
                 self.stats['clip_analyzed'] += 1
 
         # Run OCR for text detection
-        ocr_text = self.extract_ocr_text(file_path)
+        ocr_text = extract_ocr_text(file_path)
         if ocr_text:
             result['ocr_text'] = ocr_text
             self.stats['ocr_text_found'] += 1
@@ -222,7 +126,7 @@ class RenamedFileAnalyzer:
         source_path = Path(source_dir).expanduser()
         renamed_files = []
 
-        image_extensions = {'.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.heic'}
+        image_extensions = IMAGE_EXTENSIONS
 
         if recursive:
             all_files = []

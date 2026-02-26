@@ -169,28 +169,38 @@ def migrate_schema(conn: sqlite3.Connection, dry_run: bool = False):
         conn.commit()
 
 
-def backfill_files(conn: sqlite3.Connection, dry_run: bool = False) -> int:
-    """Backfill canonical_id for files."""
+def backfill_table(
+    conn: sqlite3.Connection,
+    table: str,
+    namespace: str,
+    name_column: str = "name",
+    dry_run: bool = False,
+) -> int:
+    """Generic backfill canonical_id for any entity table."""
     cursor = conn.execute(
-        "SELECT id, original_path FROM files WHERE canonical_id IS NULL"
+        f"SELECT id, {name_column} FROM {table} WHERE canonical_id IS NULL"
     )
     rows = cursor.fetchall()
 
     if not rows:
-        print("  No files need backfilling")
+        print(f"  No {table} need backfilling")
         return 0
 
-    print(f"  Backfilling {len(rows)} files...")
+    print(f"  Backfilling {len(rows)} {table}...")
 
-    for file_id, original_path in rows:
-        canonical_id = f"urn:sha256:{file_id}"
+    for row_id, name in rows:
+        if table == 'files':
+            canonical_id = f"urn:sha256:{row_id}"
+        else:
+            canonical_id = generate_canonical_id(namespace, name)
 
         if dry_run:
-            print(f"    [DRY RUN] Would set {file_id[:16]}... -> {canonical_id[:30]}...")
+            display = str(name)[:16] if name else str(row_id)[:16]
+            print(f"    [DRY RUN] Would set '{display}...' -> {canonical_id[:30]}...")
         else:
             conn.execute(
-                "UPDATE files SET canonical_id = ? WHERE id = ?",
-                (canonical_id, file_id)
+                f"UPDATE {table} SET canonical_id = ? WHERE id = ?",
+                (canonical_id, row_id)
             )
 
     if not dry_run:
@@ -199,124 +209,14 @@ def backfill_files(conn: sqlite3.Connection, dry_run: bool = False) -> int:
     return len(rows)
 
 
-def backfill_categories(conn: sqlite3.Connection, dry_run: bool = False) -> int:
-    """Backfill canonical_id for categories."""
-    cursor = conn.execute(
-        "SELECT id, name FROM categories WHERE canonical_id IS NULL"
-    )
-    rows = cursor.fetchall()
-
-    if not rows:
-        print("  No categories need backfilling")
-        return 0
-
-    print(f"  Backfilling {len(rows)} categories...")
-
-    for cat_id, name in rows:
-        canonical_id = generate_canonical_id('category', name)
-
-        if dry_run:
-            print(f"    [DRY RUN] Would set '{name}' -> {canonical_id}")
-        else:
-            conn.execute(
-                "UPDATE categories SET canonical_id = ? WHERE id = ?",
-                (canonical_id, cat_id)
-            )
-
-    if not dry_run:
-        conn.commit()
-
-    return len(rows)
-
-
-def backfill_companies(conn: sqlite3.Connection, dry_run: bool = False) -> int:
-    """Backfill canonical_id for companies."""
-    cursor = conn.execute(
-        "SELECT id, name FROM companies WHERE canonical_id IS NULL"
-    )
-    rows = cursor.fetchall()
-
-    if not rows:
-        print("  No companies need backfilling")
-        return 0
-
-    print(f"  Backfilling {len(rows)} companies...")
-
-    for comp_id, name in rows:
-        canonical_id = generate_canonical_id('company', name)
-
-        if dry_run:
-            print(f"    [DRY RUN] Would set '{name}' -> {canonical_id}")
-        else:
-            conn.execute(
-                "UPDATE companies SET canonical_id = ? WHERE id = ?",
-                (canonical_id, comp_id)
-            )
-
-    if not dry_run:
-        conn.commit()
-
-    return len(rows)
-
-
-def backfill_people(conn: sqlite3.Connection, dry_run: bool = False) -> int:
-    """Backfill canonical_id for people."""
-    cursor = conn.execute(
-        "SELECT id, name FROM people WHERE canonical_id IS NULL"
-    )
-    rows = cursor.fetchall()
-
-    if not rows:
-        print("  No people need backfilling")
-        return 0
-
-    print(f"  Backfilling {len(rows)} people...")
-
-    for person_id, name in rows:
-        canonical_id = generate_canonical_id('person', name)
-
-        if dry_run:
-            print(f"    [DRY RUN] Would set '{name}' -> {canonical_id}")
-        else:
-            conn.execute(
-                "UPDATE people SET canonical_id = ? WHERE id = ?",
-                (canonical_id, person_id)
-            )
-
-    if not dry_run:
-        conn.commit()
-
-    return len(rows)
-
-
-def backfill_locations(conn: sqlite3.Connection, dry_run: bool = False) -> int:
-    """Backfill canonical_id for locations."""
-    cursor = conn.execute(
-        "SELECT id, name FROM locations WHERE canonical_id IS NULL"
-    )
-    rows = cursor.fetchall()
-
-    if not rows:
-        print("  No locations need backfilling")
-        return 0
-
-    print(f"  Backfilling {len(rows)} locations...")
-
-    for loc_id, name in rows:
-        canonical_id = generate_canonical_id('location', name)
-
-        if dry_run:
-            print(f"    [DRY RUN] Would set '{name}' -> {canonical_id}")
-        else:
-            conn.execute(
-                "UPDATE locations SET canonical_id = ? WHERE id = ?",
-                (canonical_id, loc_id)
-            )
-
-    if not dry_run:
-        conn.commit()
-
-    return len(rows)
+# Table definitions: (table_name, namespace, name_column)
+BACKFILL_TABLES = [
+    ("files", "file", "original_path"),
+    ("categories", "category", "name"),
+    ("companies", "company", "name"),
+    ("people", "person", "name"),
+    ("locations", "location", "name"),
+]
 
 
 def backfill_data(conn: sqlite3.Connection, dry_run: bool = False):
@@ -324,21 +224,9 @@ def backfill_data(conn: sqlite3.Connection, dry_run: bool = False):
     print("\n=== Phase 2: Data Backfill ===\n")
 
     total = 0
-
-    print("Backfilling files...")
-    total += backfill_files(conn, dry_run)
-
-    print("Backfilling categories...")
-    total += backfill_categories(conn, dry_run)
-
-    print("Backfilling companies...")
-    total += backfill_companies(conn, dry_run)
-
-    print("Backfilling people...")
-    total += backfill_people(conn, dry_run)
-
-    print("Backfilling locations...")
-    total += backfill_locations(conn, dry_run)
+    for table, namespace, name_col in BACKFILL_TABLES:
+        print(f"Backfilling {table}...")
+        total += backfill_table(conn, table, namespace, name_col, dry_run)
 
     return total
 

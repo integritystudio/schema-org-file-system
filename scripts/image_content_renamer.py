@@ -12,26 +12,19 @@ from pathlib import Path
 from typing import Optional, List, Tuple
 
 try:
-    import torch
-    from transformers import CLIPProcessor, CLIPModel
     from PIL import Image
-    CLIP_AVAILABLE = True
 except ImportError:
-    CLIP_AVAILABLE = False
-    print("Warning: CLIP not available. Install torch and transformers.")
+    pass
 
-try:
-    from pillow_heif import register_heif_opener
-    register_heif_opener()
-    HEIC_SUPPORT = True
-except ImportError:
-    HEIC_SUPPORT = False
+from shared.clip_utils import CLIPClassifier, CLIP_AVAILABLE
+from shared.constants import IMAGE_EXTENSIONS_WIDE
+from shared.file_ops import resolve_collision
 
 
 class ImageContentRenamer:
     """Rename images based on visual content analysis."""
 
-    IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.heic', '.webp', '.bmp', '.tiff', '.tif'}
+    IMAGE_EXTENSIONS = IMAGE_EXTENSIONS_WIDE
 
     # Content categories for CLIP classification
     CONTENT_CATEGORIES = [
@@ -79,9 +72,7 @@ class ImageContentRenamer:
 
     def __init__(self, dry_run: bool = False):
         self.dry_run = dry_run
-        self.model = None
-        self.processor = None
-        self.device = None
+        self.classifier = None
         self.stats = {
             'total': 0,
             'renamed': 0,
@@ -91,17 +82,7 @@ class ImageContentRenamer:
         }
 
         if CLIP_AVAILABLE:
-            self._load_model()
-
-    def _load_model(self):
-        """Load CLIP model for image analysis."""
-        print("Loading CLIP model...")
-        self.device = "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu"
-        self.model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
-        self.processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-        self.model.to(self.device)
-        self.model.eval()
-        print(f"✓ CLIP model loaded (device: {self.device})")
+            self.classifier = CLIPClassifier()
 
     def analyze_image(self, image_path: Path) -> Optional[Tuple[str, float]]:
         """
@@ -110,36 +91,18 @@ class ImageContentRenamer:
         Returns:
             Tuple of (best_category, confidence) or None if analysis fails
         """
-        if not CLIP_AVAILABLE or self.model is None:
+        if not CLIP_AVAILABLE or self.classifier is None:
             return None
 
         try:
-            image = Image.open(image_path).convert("RGB")
-
             # First pass: broad category classification
-            text_inputs = [f"a photo of {cat}" for cat in self.CONTENT_CATEGORIES]
-
-            inputs = self.processor(
-                text=text_inputs,
-                images=image,
-                return_tensors="pt",
-                padding=True
+            top_category, top_confidence = self.classifier.top_match(
+                image_path, self.CONTENT_CATEGORIES
             )
-            inputs = {k: v.to(self.device) for k, v in inputs.items()}
-
-            with torch.no_grad():
-                outputs = self.model(**inputs)
-                logits = outputs.logits_per_image
-                probs = logits.softmax(dim=1)
-
-            # Get top category
-            top_idx = probs.argmax().item()
-            top_category = self.CONTENT_CATEGORIES[top_idx]
-            top_confidence = probs[0][top_idx].item()
 
             # Second pass: refinement if category has specific terms
             if top_category in self.REFINEMENT_TERMS and top_confidence > 0.15:
-                refined = self._refine_category(image, top_category)
+                refined = self._refine_category(image_path, top_category)
                 if refined:
                     return refined
 
@@ -149,32 +112,16 @@ class ImageContentRenamer:
             print(f"  Error analyzing image: {e}")
             return None
 
-    def _refine_category(self, image: Image.Image, category: str) -> Optional[Tuple[str, float]]:
+    def _refine_category(self, image_path: Path, category: str) -> Optional[Tuple[str, float]]:
         """Refine the category with more specific terms."""
         refinements = self.REFINEMENT_TERMS.get(category, [])
         if not refinements:
             return None
 
-        text_inputs = [f"a photo of {term}" for term in refinements]
-
-        inputs = self.processor(
-            text=text_inputs,
-            images=image,
-            return_tensors="pt",
-            padding=True
-        )
-        inputs = {k: v.to(self.device) for k, v in inputs.items()}
-
-        with torch.no_grad():
-            outputs = self.model(**inputs)
-            logits = outputs.logits_per_image
-            probs = logits.softmax(dim=1)
-
-        top_idx = probs.argmax().item()
-        top_confidence = probs[0][top_idx].item()
+        top_term, top_confidence = self.classifier.top_match(image_path, refinements)
 
         if top_confidence > 0.3:
-            return (refinements[top_idx], top_confidence)
+            return (top_term, top_confidence)
         return None
 
     def generate_filename(self, image_path: Path, content: str, confidence: float) -> str:
@@ -286,13 +233,8 @@ class ImageContentRenamer:
         # Handle duplicates
         new_path = file_path.parent / new_name
         if new_path.exists() and new_path != file_path:
-            counter = 1
-            stem = new_path.stem
-            ext = new_path.suffix
-            while new_path.exists():
-                new_name = f"{stem}_{counter}{ext}"
-                new_path = file_path.parent / new_name
-                counter += 1
+            new_path = resolve_collision(new_path)
+            new_name = new_path.name
             result['new_name'] = new_name
 
         # Perform rename

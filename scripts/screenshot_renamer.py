@@ -19,23 +19,9 @@ from collections import defaultdict
 import hashlib
 import json
 
-# OCR imports
-try:
-    import pytesseract
-    from PIL import Image
-    OCR_AVAILABLE = True
-except ImportError:
-    OCR_AVAILABLE = False
-    print("Warning: OCR not available. Install pytesseract, Pillow")
-
-# Vision imports
-try:
-    from transformers import CLIPProcessor, CLIPModel
-    import torch
-    VISION_AVAILABLE = True
-except ImportError:
-    VISION_AVAILABLE = False
-    print("Warning: Vision not available. Install transformers, torch")
+from shared.clip_utils import CLIPClassifier, CLIP_AVAILABLE
+from shared.ocr_utils import extract_ocr_text, is_ocr_available
+from shared.file_ops import resolve_collision
 
 # Add src directory to path for error tracking (portable)
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
@@ -56,17 +42,13 @@ class ScreenshotAnalyzer:
     """Analyzes screenshots using CLIP and OCR to identify content."""
 
     def __init__(self):
-        self.model = None
-        self.processor = None
-        self.vision_available = VISION_AVAILABLE
-        self.ocr_available = OCR_AVAILABLE
+        self.classifier = None
+        self.vision_available = CLIP_AVAILABLE
+        self.ocr_available = is_ocr_available()
 
         if self.vision_available:
             try:
-                print("Loading CLIP model...")
-                self.model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
-                self.processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-                print("✓ CLIP model loaded")
+                self.classifier = CLIPClassifier()
             except Exception as e:
                 print(f"Warning: Could not load CLIP: {e}")
                 self.vision_available = False
@@ -203,19 +185,7 @@ class ScreenshotAnalyzer:
 
     def extract_text_ocr(self, image_path: Path) -> str:
         """Extract text from image using OCR."""
-        if not self.ocr_available:
-            return ""
-
-        try:
-            image = Image.open(image_path)
-            # Use simple config for small icons
-            text = pytesseract.image_to_string(
-                image,
-                config='--psm 10 --oem 3'  # Single character mode
-            ).strip()
-            return text
-        except Exception as e:
-            return ""
+        return extract_ocr_text(image_path, config='--psm 10 --oem 3') or ""
 
     def classify_image(self, image_path: Path) -> Tuple[str, float, Dict[str, float]]:
         """
@@ -224,38 +194,15 @@ class ScreenshotAnalyzer:
         Returns:
             Tuple of (best_category, confidence, all_scores)
         """
-        if not self.vision_available or self.model is None:
+        if not self.vision_available or self.classifier is None:
             return ("unknown", 0.0, {})
 
         try:
-            image = Image.open(image_path)
+            raw_results = self.classifier.classify_raw(image_path, self.game_categories)
 
-            # Convert to RGB if necessary
-            if image.mode != 'RGB':
-                image = image.convert('RGB')
-
-            # Prepare inputs
-            inputs = self.processor(
-                text=self.game_categories,
-                images=image,
-                return_tensors="pt",
-                padding=True
-            )
-
-            # Get predictions
-            with torch.no_grad():
-                outputs = self.model(**inputs)
-                logits_per_image = outputs.logits_per_image
-                probs = logits_per_image.softmax(dim=1)
-
-            # Get scores
-            scores = {}
-            for i, category in enumerate(self.game_categories):
-                scores[category] = float(probs[0][i])
-
-            # Find best match
-            best_category = max(scores, key=scores.get)
-            confidence = scores[best_category]
+            scores = {prompt: conf for prompt, conf in raw_results}
+            best_category = raw_results[0][0]
+            confidence = raw_results[0][1]
 
             return (best_category, confidence, scores)
 
@@ -369,12 +316,7 @@ class ScreenshotOrganizer:
         dest_path = dest_folder / result['new_name']
 
         # Handle name collisions
-        counter = 1
-        while dest_path.exists():
-            stem = Path(result['new_name']).stem
-            ext = Path(result['new_name']).suffix
-            dest_path = dest_folder / f"{stem}_{counter}{ext}"
-            counter += 1
+        dest_path = resolve_collision(dest_path)
 
         result['dest_folder'] = str(dest_folder)
         result['dest_path'] = str(dest_path)

@@ -12,66 +12,8 @@ from pathlib import Path
 from collections import defaultdict
 from typing import Dict, Tuple
 
-# Schema.org-based folder mapping for content types
-CONTENT_TO_SCHEMA = {
-    # Animals/Pets -> ImageObject/Animal
-    "an animal or pet": ("ImageObject", "Animal"),
-
-    # Memes/Social -> CreativeWork/SocialMediaPosting
-    "a meme or social media image": ("CreativeWork", "SocialMediaPosting"),
-
-    # Logos -> CreativeWork/Brand
-    "a logo or brand image": ("CreativeWork", "Brand"),
-
-    # Games -> CreativeWork/GameAsset
-    "a game or entertainment": ("CreativeWork", "GameAsset"),
-
-    # Artwork -> CreativeWork/VisualArtwork
-    "artwork or illustration": ("CreativeWork", "VisualArtwork"),
-
-    # Documents -> DigitalDocument/Document
-    "a document or text": ("DigitalDocument", "Document"),
-
-    # Screenshots -> ImageObject/Screenshot
-    "screenshot: a computer screen": ("ImageObject", "Screenshot"),
-    "screenshot: a mobile phone": ("ImageObject", "MobileScreenshot"),
-
-    # Diagrams -> CreativeWork/Diagram
-    "a diagram or chart": ("CreativeWork", "Diagram"),
-
-    # Portraits -> ImageObject/Portrait
-    "people or portrait": ("ImageObject", "Portrait"),
-
-    # Products -> Product/Image
-    "a product or object": ("Product", "ProductImage"),
-
-    # Interior -> RealEstateListing/Interior
-    "an interior room": ("RealEstateListing", "Interior"),
-
-    # Food -> ImageObject/FoodPhoto
-    "food or a meal": ("ImageObject", "FoodPhoto"),
-
-    # Nature/Landscape -> ImageObject/Landscape
-    "a landscape or nature scene": ("ImageObject", "Landscape"),
-
-    # Cityscape -> ImageObject/Cityscape
-    "a cityscape or urban scene": ("ImageObject", "Cityscape"),
-
-    # Vehicles -> ImageObject/Vehicle
-    "a vehicle or transportation": ("ImageObject", "Vehicle"),
-
-    # Buildings -> ImageObject/Architecture
-    "a building or architecture": ("ImageObject", "Architecture"),
-
-    # Events -> ImageObject/Event
-    "an event or celebration": ("ImageObject", "Event"),
-
-    # Sports -> ImageObject/Sports
-    "sports or physical activity": ("ImageObject", "Sports"),
-
-    # Abstract -> CreativeWork/AbstractArt
-    "abstract art or pattern": ("CreativeWork", "AbstractArt"),
-}
+from shared.constants import CONTENT_TO_SCHEMA
+from shared.file_ops import resolve_collision
 
 
 def get_schema_path(content_type: str, base_path: Path) -> Path:
@@ -132,14 +74,7 @@ def organize_files(
             continue
 
         # Handle collisions
-        if dest_path.exists():
-            counter = 1
-            stem = source_path.stem
-            ext = source_path.suffix
-            while dest_path.exists():
-                new_name = f"{stem}_{counter}{ext}"
-                dest_path = dest_dir / new_name
-                counter += 1
+        dest_path = resolve_collision(dest_path)
 
         # Create destination directory
         if not dry_run:

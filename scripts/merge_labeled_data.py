@@ -10,10 +10,11 @@ The result is an enriched dataset with more diverse labeled examples.
 """
 
 import json
-import sqlite3
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
+
+from shared.db_utils import get_db_connection
 
 
 def get_labeling_session_data(db_path: str, ml_session: str) -> List[Dict]:
@@ -27,8 +28,7 @@ def get_labeling_session_data(db_path: str, ml_session: str) -> List[Dict]:
     Returns:
         List of file records with labels
     """
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
 
     query = """

@@ -11,66 +11,8 @@ import shutil
 from pathlib import Path
 from collections import defaultdict
 
-# Map content types to existing folder paths
-CONTENT_TO_EXISTING_FOLDER = {
-    # Animals/Pets -> ImageObject/Photograph (closest existing match)
-    "an animal or pet": "ImageObject/Photograph",
-
-    # Memes/Social -> CreativeWork/SocialMediaPosting
-    "a meme or social media image": "CreativeWork/SocialMediaPosting",
-
-    # Logos -> CreativeWork/Brand
-    "a logo or brand image": "CreativeWork/Brand",
-
-    # Games -> CreativeWork/GameAsset/Sprites
-    "a game or entertainment": "CreativeWork/GameAsset/Sprites",
-
-    # Artwork -> CreativeWork/VisualArtwork
-    "artwork or illustration": "CreativeWork/VisualArtwork",
-
-    # Documents -> DigitalDocument/Document
-    "a document or text": "DigitalDocument/Document",
-
-    # Screenshots -> ImageObject/Screenshot
-    "screenshot: a computer screen": "ImageObject/Screenshot",
-    "screenshot: a mobile phone": "ImageObject/Screenshot",
-
-    # Diagrams -> CreativeWork/Diagram
-    "a diagram or chart": "CreativeWork/Diagram",
-
-    # Portraits -> ImageObject/Photograph
-    "people or portrait": "ImageObject/Photograph",
-
-    # Products -> Product (existing folder)
-    "a product or object": "Product",
-
-    # Interior -> RealEstateListing
-    "an interior room": "RealEstateListing",
-
-    # Food -> ImageObject/Photograph
-    "food or a meal": "ImageObject/Photograph",
-
-    # Nature/Landscape -> ImageObject/Photograph
-    "a landscape or nature scene": "ImageObject/Photograph",
-
-    # Cityscape -> ImageObject/Photograph
-    "a cityscape or urban scene": "ImageObject/Photograph",
-
-    # Vehicles -> ImageObject/Photograph
-    "a vehicle or transportation": "ImageObject/Photograph",
-
-    # Buildings -> ImageObject/Photograph
-    "a building or architecture": "ImageObject/Photograph",
-
-    # Events -> ImageObject/Photograph
-    "an event or celebration": "ImageObject/Photograph",
-
-    # Sports -> ImageObject/Photograph
-    "sports or physical activity": "ImageObject/Photograph",
-
-    # Abstract -> CreativeWork/VisualArtwork
-    "abstract art or pattern": "CreativeWork/VisualArtwork",
-}
+from shared.constants import CONTENT_TO_EXISTING_FOLDER, IMAGE_EXTENSIONS
+from shared.file_ops import resolve_collision
 
 
 def organize_files(base_path: str = "~/Documents", dry_run: bool = False) -> dict:
@@ -96,7 +38,7 @@ def organize_files(base_path: str = "~/Documents", dry_run: bool = False) -> dic
     print(f"Base path: {base_path}")
 
     # Find all files in ~/Documents root that match our renamed files
-    root_files = [f for f in base_path.iterdir() if f.is_file() and f.suffix.lower() in ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.heic']]
+    root_files = [f for f in base_path.iterdir() if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS]
 
     # Filter to only files we renamed (have content descriptions)
     files_to_organize = []
@@ -158,14 +100,7 @@ def organize_files(base_path: str = "~/Documents", dry_run: bool = False) -> dic
             dest_dir.mkdir(parents=True, exist_ok=True)
 
         # Handle collisions
-        if dest_path.exists():
-            counter = 1
-            stem = file_path.stem
-            ext = file_path.suffix
-            while dest_path.exists():
-                new_name = f"{stem}_{counter}{ext}"
-                dest_path = dest_dir / new_name
-                counter += 1
+        dest_path = resolve_collision(dest_path)
 
         # Move file
         try:

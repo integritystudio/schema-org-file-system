@@ -7,11 +7,12 @@ from the labeling sessions stored in the database.
 """
 
 import json
-import sqlite3
 import hashlib
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple
+
+from shared.db_utils import get_db_connection
 
 
 def compute_file_id(filepath: str) -> str:
@@ -34,7 +35,7 @@ def get_labeled_categories(db_path: str, ml_session: str) -> Tuple[Dict, Dict]:
     Returns:
         Tuple of (path_dict, filename_dict) mapping to category info
     """
-    conn = sqlite3.connect(db_path)
+    conn = get_db_connection(db_path, row_factory=False)
     cursor = conn.cursor()
 
     # Get ONLY labeling session data (manual corrections)
