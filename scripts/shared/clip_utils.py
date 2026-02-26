@@ -1,6 +1,9 @@
 """CLIP model loading and classification utilities."""
 from __future__ import annotations
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 CLIP_AVAILABLE = False
 try:
@@ -33,12 +36,12 @@ class CLIPClassifier:
     if not CLIP_AVAILABLE:
       raise RuntimeError("CLIP not available. Install torch and transformers.")
     self.device = device or self._detect_device()
-    print(f"Loading CLIP model...")
+    logger.info("Loading CLIP model %s", self.MODEL_NAME)
     self.model = CLIPModel.from_pretrained(self.MODEL_NAME)
     self.processor = CLIPProcessor.from_pretrained(self.MODEL_NAME)
     self.model.to(self.device)
     self.model.eval()
-    print(f"CLIP model loaded (device: {self.device})")
+    logger.info("CLIP model loaded (device: %s)", self.device)
 
   @staticmethod
   def _detect_device() -> str:
@@ -62,7 +65,8 @@ class CLIPClassifier:
 
     Returns list of (label, confidence) sorted by confidence descending.
     """
-    image = Image.open(image_path).convert("RGB")
+    with Image.open(image_path) as img:
+      image = img.convert("RGB")
     text_inputs = [f"{prompt_prefix}{lbl}" for lbl in labels]
 
     inputs = self.processor(
@@ -91,7 +95,8 @@ class CLIPClassifier:
     Useful when labels already include "a photo of" etc.
     Returns list of (prompt, confidence) sorted by confidence descending.
     """
-    image = Image.open(image_path).convert("RGB")
+    with Image.open(image_path) as img:
+      image = img.convert("RGB")
 
     inputs = self.processor(
       text=text_prompts,

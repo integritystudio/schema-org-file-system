@@ -28,29 +28,28 @@ CLIP_CONTENT_LABELS = [
   "abstract art or pattern",
 ]
 
-# CLIP prompts used by analyze_renamed_files (full "a photo of" prefixed versions)
-CLIP_CATEGORY_PROMPTS = [
-  "a photo of a landscape or nature scene",
-  "a photo of a cityscape or urban scene",
-  "a photo of an interior room",
-  "a photo of food or a meal",
-  "a photo of people or portrait",
-  "a photo of an animal or pet",
-  "a photo of a document or text",
-  "a photo of artwork or illustration",
-  "a photo of a product or object",
-  "a photo of a vehicle or transportation",
-  "a screenshot of a computer screen",
-  "a screenshot of a mobile phone",
-  "a photo of a building or architecture",
-  "a photo of an event or celebration",
-  "a photo of sports or physical activity",
-  "a photo of a game or entertainment",
+# Labels that CLIP handles better without "a photo of" prefix.
+_NO_PHOTO_PREFIX = {
   "a diagram or chart",
   "a meme or social media image",
   "a logo or brand image",
   "abstract art or pattern",
-]
+}
+
+
+def _make_clip_prompt(label: str) -> str:
+  """Convert a CLIP_CONTENT_LABELS entry to a full CLIP text prompt."""
+  if label.startswith("screenshot: "):
+    return "a screenshot of " + label[len("screenshot: "):]
+  if label in _NO_PHOTO_PREFIX:
+    return label
+  return "a photo of " + label
+
+
+# CLIP prompts derived from CLIP_CONTENT_LABELS — do not edit separately.
+# Callers that need raw prompts should use this list; callers that need
+# canonical label keys should strip prefixes or use CLIP_CONTENT_LABELS directly.
+CLIP_CATEGORY_PROMPTS: list[str] = [_make_clip_prompt(lbl) for lbl in CLIP_CONTENT_LABELS]
 
 # Content type -> Schema.org type mapping (from organize_by_content.py)
 CONTENT_TO_SCHEMA: dict[str, tuple[str, str]] = {

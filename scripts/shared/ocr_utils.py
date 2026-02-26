@@ -1,7 +1,6 @@
 """Shared OCR text extraction."""
 from __future__ import annotations
 from pathlib import Path
-from typing import Optional
 
 OCR_AVAILABLE = False
 try:
@@ -28,7 +27,7 @@ def extract_ocr_text(
   max_chars: int = 500,
   config: str = "",
   timeout: int = 10,
-) -> Optional[str]:
+) -> str | None:
   """Extract text from image using OCR.
 
   Handles RGB conversion, text cleanup, and truncation.
@@ -37,10 +36,10 @@ def extract_ocr_text(
   if not OCR_AVAILABLE:
     return None
   try:
-    img = Image.open(image_path)
-    if img.mode != 'RGB':
-      img = img.convert('RGB')
-    text = pytesseract.image_to_string(img, timeout=timeout, config=config)
+    with Image.open(image_path) as img:
+      if img.mode != 'RGB':
+        img = img.convert('RGB')
+      text = pytesseract.image_to_string(img, timeout=timeout, config=config)
     text = ' '.join(text.split())
     if max_chars and len(text) > max_chars:
       text = text[:max_chars] + "..."

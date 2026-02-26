@@ -1,9 +1,11 @@
 """Shared utilities for scripts."""
 
+from shared.clip_utils import CLIPClassifier, CLIP_AVAILABLE
 from shared.constants import (
   IMAGE_EXTENSIONS,
   IMAGE_EXTENSIONS_WIDE,
   CLIP_CONTENT_LABELS,
+  CLIP_CATEGORY_PROMPTS,
   CONTENT_TO_SCHEMA,
   CONTENT_TO_EXISTING_FOLDER,
   CONTENT_ABBREVIATIONS,
@@ -14,5 +16,6 @@ from shared.constants import (
   SCREENSHOT_PATTERNS,
   DOCUMENT_PATTERNS,
 )
+from shared.db_utils import get_db_connection, db_connection, DEFAULT_DB_PATH
 from shared.file_ops import resolve_collision
-from shared.db_utils import get_db_connection, DEFAULT_DB_PATH
+from shared.ocr_utils import extract_ocr_text, is_ocr_available
