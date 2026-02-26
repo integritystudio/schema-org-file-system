@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from shared.db_utils import get_db_connection, DEFAULT_DB_PATH
+from shared.db_utils import db_connection, DEFAULT_DB_PATH
 
 DB_PATH = DEFAULT_DB_PATH
 OUTPUT_PATH = Path(__file__).parent.parent / "_site" / "timeline_data.json"
@@ -17,122 +17,109 @@ OUTPUT_PATH = Path(__file__).parent.parent / "_site" / "timeline_data.json"
 
 def get_sessions() -> list[dict[str, Any]]:
     """Get all organization sessions with their stats."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    with db_connection() as conn:
+        cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT
-            id,
-            started_at,
-            completed_at,
-            dry_run,
-            source_directories,
-            base_path,
-            file_limit,
-            total_files,
-            organized_count,
-            skipped_count,
-            error_count,
-            total_cost,
-            total_processing_time_sec
-        FROM organization_sessions
-        WHERE total_files > 0
-        ORDER BY started_at ASC
-    """)
+        cursor.execute("""
+            SELECT
+                id,
+                started_at,
+                completed_at,
+                dry_run,
+                source_directories,
+                base_path,
+                file_limit,
+                total_files,
+                organized_count,
+                skipped_count,
+                error_count,
+                total_cost,
+                total_processing_time_sec
+            FROM organization_sessions
+            WHERE total_files > 0
+            ORDER BY started_at ASC
+        """)
 
-    sessions = []
-    for row in cursor.fetchall():
-        session = dict(row)
-        session['id_short'] = session['id'][:8]
+        sessions = []
+        for row in cursor.fetchall():
+            session = dict(row)
+            session['id_short'] = session['id'][:8]
 
-        # Parse JSON fields
-        if session['source_directories']:
-            try:
-                session['source_directories'] = json.loads(session['source_directories'])
-            except (json.JSONDecodeError, TypeError):
+            # Parse JSON fields
+            if session['source_directories']:
+                try:
+                    session['source_directories'] = json.loads(session['source_directories'])
+                except (json.JSONDecodeError, TypeError):
+                    session['source_directories'] = []
+            else:
                 session['source_directories'] = []
-        else:
-            session['source_directories'] = []
 
-        # Calculate success rate
-        if session['total_files'] > 0:
-            session['success_rate'] = round(
-                (session['organized_count'] / session['total_files']) * 100, 1
-            )
-        else:
-            session['success_rate'] = 0
+            # Calculate success rate
+            if session['total_files'] > 0:
+                session['success_rate'] = round(
+                    (session['organized_count'] / session['total_files']) * 100, 1
+                )
+            else:
+                session['success_rate'] = 0
 
-        sessions.append(session)
+            sessions.append(session)
 
-    conn.close()
     return sessions
 
 
 def get_session_categories(session_id: str) -> list[dict[str, Any]]:
     """Get category breakdown for a specific session."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT
-            c.name,
-            c.color,
-            c.icon,
-            COUNT(fc.file_id) as count,
-            AVG(fc.confidence) as avg_confidence
-        FROM categories c
-        JOIN file_categories fc ON c.id = fc.category_id
-        JOIN files f ON fc.file_id = f.id
-        WHERE f.session_id = ?
-        GROUP BY c.id
-        ORDER BY count DESC
-        LIMIT 10
-    """, (session_id,))
-
-    categories = [dict(row) for row in cursor.fetchall()]
-    conn.close()
-    return categories
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT
+                c.name,
+                c.color,
+                c.icon,
+                COUNT(fc.file_id) as count,
+                AVG(fc.confidence) as avg_confidence
+            FROM categories c
+            JOIN file_categories fc ON c.id = fc.category_id
+            JOIN files f ON fc.file_id = f.id
+            WHERE f.session_id = ?
+            GROUP BY c.id
+            ORDER BY count DESC
+            LIMIT 10
+        """, (session_id,))
+        return [dict(row) for row in cursor.fetchall()]
 
 
 def get_session_schema_types(session_id: str) -> list[dict[str, Any]]:
     """Get schema type distribution for a specific session."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT
-            schema_type,
-            COUNT(*) as count
-        FROM files
-        WHERE session_id = ? AND schema_type IS NOT NULL
-        GROUP BY schema_type
-        ORDER BY count DESC
-    """, (session_id,))
-
-    schema_types = [dict(row) for row in cursor.fetchall()]
-    conn.close()
-    return schema_types
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT
+                schema_type,
+                COUNT(*) as count
+            FROM files
+            WHERE session_id = ? AND schema_type IS NOT NULL
+            GROUP BY schema_type
+            ORDER BY count DESC
+        """, (session_id,))
+        return [dict(row) for row in cursor.fetchall()]
 
 
 def get_session_extensions(session_id: str) -> list[dict[str, Any]]:
     """Get file extension distribution for a specific session."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT
-            LOWER(file_extension) as extension,
-            COUNT(*) as count
-        FROM files
-        WHERE session_id = ? AND file_extension IS NOT NULL
-        GROUP BY LOWER(file_extension)
-        ORDER BY count DESC
-        LIMIT 10
-    """, (session_id,))
-
-    extensions = [dict(row) for row in cursor.fetchall()]
-    conn.close()
-    return extensions
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT
+                LOWER(file_extension) as extension,
+                COUNT(*) as count
+            FROM files
+            WHERE session_id = ? AND file_extension IS NOT NULL
+            GROUP BY LOWER(file_extension)
+            ORDER BY count DESC
+            LIMIT 10
+        """, (session_id,))
+        return [dict(row) for row in cursor.fetchall()]
 
 
 def calculate_session_changes(current: dict, previous: dict | None) -> dict[str, Any]:
@@ -161,36 +148,35 @@ def calculate_session_changes(current: dict, previous: dict | None) -> dict[str,
 
 def get_cumulative_stats() -> dict[str, Any]:
     """Get cumulative statistics across all sessions."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    with db_connection() as conn:
+        cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT
-            COUNT(DISTINCT session_id) as total_sessions,
-            COUNT(*) as total_files,
-            SUM(CASE WHEN status = 'organized' THEN 1 ELSE 0 END) as total_organized,
-            AVG(processing_time_sec) as avg_processing_time
-        FROM files
-        WHERE session_id IS NOT NULL
-    """)
+        cursor.execute("""
+            SELECT
+                COUNT(DISTINCT session_id) as total_sessions,
+                COUNT(*) as total_files,
+                SUM(CASE WHEN status = 'organized' THEN 1 ELSE 0 END) as total_organized,
+                AVG(processing_time_sec) as avg_processing_time
+            FROM files
+            WHERE session_id IS NOT NULL
+        """)
 
-    stats = dict(cursor.fetchone())
+        stats = dict(cursor.fetchone())
 
-    # Get category totals
-    cursor.execute("""
-        SELECT
-            c.name,
-            COUNT(fc.file_id) as count
-        FROM categories c
-        LEFT JOIN file_categories fc ON c.id = fc.category_id
-        GROUP BY c.id
-        ORDER BY count DESC
-        LIMIT 5
-    """)
+        # Get category totals
+        cursor.execute("""
+            SELECT
+                c.name,
+                COUNT(fc.file_id) as count
+            FROM categories c
+            LEFT JOIN file_categories fc ON c.id = fc.category_id
+            GROUP BY c.id
+            ORDER BY count DESC
+            LIMIT 5
+        """)
 
-    stats['top_categories'] = [dict(row) for row in cursor.fetchall()]
+        stats['top_categories'] = [dict(row) for row in cursor.fetchall()]
 
-    conn.close()
     return stats
 
 
