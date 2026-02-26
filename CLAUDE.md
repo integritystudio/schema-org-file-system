@@ -31,6 +31,7 @@ organize-files health                    # Check dependencies
 │   └── storage/
 │       └── graph_store.py  # SQLAlchemy graph with canonical IDs
 ├── scripts/
+│   ├── shared/                          # Shared utilities (clip, db, ocr, file ops)
 │   ├── file_organizer_content_based.py  # Main AI organizer
 │   ├── image_content_renamer.py         # CLIP-based image renaming
 │   └── image_content_analyzer.py        # Image content analysis
@@ -40,6 +41,8 @@ organize-files health                    # Check dependencies
 ├── _site/                  # Dashboard UI
 └── results/                # Reports & database
 ```
+
+**Note on `scripts/shared/`:** Scripts must be run from the project root (or with `scripts/` on `sys.path`) so that `from shared.x import y` resolves correctly. The `organize-files` CLI entry point handles this automatically.
 
 ## Classification Priority
 
