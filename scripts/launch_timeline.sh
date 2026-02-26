@@ -38,7 +38,7 @@ fi
 
 # Step 1: Generate timeline data
 echo -e "${BLUE}[1/3]${NC} Generating timeline data..."
-python3 src/api/timeline_api.py --db-path results/file_organization.db --output _site/timeline_data.json
+python3 scripts/generate_timeline_data.py
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✅ Timeline data generated successfully${NC}"
