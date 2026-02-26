@@ -11,8 +11,13 @@ import shutil
 from pathlib import Path
 from collections import defaultdict
 
-from shared.constants import CONTENT_TO_EXISTING_FOLDER, IMAGE_EXTENSIONS
+from shared.constants import CONTENT_TO_EXISTING_FOLDER, CONTENT_ABBREVIATIONS, IMAGE_EXTENSIONS
 from shared.file_ops import resolve_collision
+
+# Reverse lookup: "_abbrev_" substring → canonical content type label.
+# CONTENT_ABBREVIATIONS maps content_type → abbrev, so we invert it here.
+# Derived from shared constants so it stays in sync automatically.
+_ABBREV_TO_CONTENT = {f"_{abbrev}_": ctype for ctype, abbrev in CONTENT_ABBREVIATIONS.items()}
 
 
 def organize_files(base_path: str = "~/Documents", dry_run: bool = False) -> dict:
@@ -43,8 +48,7 @@ def organize_files(base_path: str = "~/Documents", dry_run: bool = False) -> dic
     # Filter to only files we renamed (have content descriptions)
     files_to_organize = []
     for f in root_files:
-        # Check if this looks like one of our renamed files
-        if any(keyword in f.name.lower() for keyword in ['_pet_', '_meme_', '_logo_', '_game_', '_art_', '_doc_', '_screenshot_', '_chart_', '_portrait_', '_product_', '_interior_', '_food_']):
+        if any(abbrev in f.name.lower() for abbrev in _ABBREV_TO_CONTENT):
             files_to_organize.append(f)
 
     print(f"Files to organize: {len(files_to_organize)}\n")
@@ -53,34 +57,14 @@ def organize_files(base_path: str = "~/Documents", dry_run: bool = False) -> dic
     organization_log = []
 
     for i, file_path in enumerate(files_to_organize, 1):
-        # Determine content type from filename
+        # Determine content type from filename abbreviation
         content_type = None
         fname_lower = file_path.name.lower()
 
-        if '_pet_' in fname_lower:
-            content_type = "an animal or pet"
-        elif '_meme_' in fname_lower:
-            content_type = "a meme or social media image"
-        elif '_logo_' in fname_lower:
-            content_type = "a logo or brand image"
-        elif '_game_' in fname_lower:
-            content_type = "a game or entertainment"
-        elif '_art_' in fname_lower:
-            content_type = "artwork or illustration"
-        elif '_doc_' in fname_lower:
-            content_type = "a document or text"
-        elif '_screenshot_' in fname_lower:
-            content_type = "screenshot: a computer screen"
-        elif '_chart_' in fname_lower:
-            content_type = "a diagram or chart"
-        elif '_portrait_' in fname_lower:
-            content_type = "people or portrait"
-        elif '_product_' in fname_lower:
-            content_type = "a product or object"
-        elif '_interior_' in fname_lower:
-            content_type = "an interior room"
-        elif '_food_' in fname_lower:
-            content_type = "food or a meal"
+        for abbrev_key, ctype in _ABBREV_TO_CONTENT.items():
+            if abbrev_key in fname_lower:
+                content_type = ctype
+                break
 
         if not content_type:
             stats['no_content_type'] += 1
