@@ -2556,9 +2556,11 @@ class ContentBasedFileOrganizer:
             data_viz_terms = {'pricing', 'trace', 'chart', 'graph', 'data', 'analytics',
                               'report', 'metrics', 'dashboard', 'distribution', 'histogram',
                               'timeline', 'funnel', 'heatmap', 'treemap', 'scatter', 'trend',
-                              'forecast', 'summary', 'overview', 'statistics', 'benchmark'}
+                              'forecast', 'summary', 'overview', 'statistics', 'benchmark',
+                              'rework'}
             branding_terms = {'logo', 'logos', 'logotype', 'favicon', 'brandmark', 'wordmark'}
-            if re.match(r'^[a-z]+$', stem) and len(stem) > 2 and stem not in data_viz_terms and stem not in branding_terms:
+            portrait_terms = {'profile', 'headshot', 'portrait', 'avatar'}
+            if re.match(r'^[a-z]+$', stem) and len(stem) > 2 and stem not in data_viz_terms and stem not in branding_terms and stem not in portrait_terms:
                 print(f"  ✓ Filename pattern: Game asset (single word)")
                 return ('game_assets', 'sprites', None, [])
             # Pattern: data visualization single word
@@ -2573,6 +2575,10 @@ class ContentBasedFileOrganizer:
             if re.match(r'^\d+_\d+_\d+_n$', stem):
                 print(f"  ✓ Filename pattern: Facebook image")
                 return ('media', 'photos_facebook', None, [])
+            # Pattern: Portrait/profile photos (profile.png, headshot.png, avatar.png)
+            if stem in portrait_terms or stem.startswith('profile') or stem.startswith('headshot'):
+                print(f"  ✓ Filename pattern: Portrait photo")
+                return ('media', 'photos_portraits', None, [])
             # Pattern: Logo images (logo-..., logotype-..., *-logo.png)
             if 'logo' in stem or 'logotype' in stem:
                 print(f"  ✓ Filename pattern: Logo image")
