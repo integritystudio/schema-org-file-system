@@ -3022,6 +3022,22 @@ class ContentBasedFileOrganizer:
 
         return ""
 
+    _GEOGRAPHIC_LABELS = frozenset({
+        "a landscape or nature scene",
+        "a cityscape or urban scene",
+        "a building or architecture",
+    })
+
+    def _map_clip_label(self, label: str, image_metadata: Dict = None) -> Optional[Tuple[str, str]]:
+        """Map a CLIP label to (category, subcategory), upgrading to travel if GPS present."""
+        mapping = CLIP_LABEL_TO_ORGANIZER.get(label)
+        if not mapping:
+            return None
+        cat, subcat = mapping
+        if image_metadata and image_metadata.get("gps_coordinates") and label in self._GEOGRAPHIC_LABELS:
+            cat, subcat = "media", "photos_travel"
+        return (cat, subcat)
+
     def enhance_weak_image_classification(
         self, file_path: Path, image_metadata: Dict = None
     ) -> Optional[Tuple[str, str]]:
@@ -3032,7 +3048,7 @@ class ContentBasedFileOrganizer:
         """
         if not ENHANCED_CLIP_AVAILABLE or not self.image_analyzer.vision_available:
             return None
-        if self.image_analyzer.model is None or self.image_analyzer.processor is None:
+        if not self.image_analyzer.model or not self.image_analyzer.processor:
             return None
 
         try:
@@ -3041,22 +3057,15 @@ class ContentBasedFileOrganizer:
             print(f"  CLIP enhance: cannot open image: {e}")
             return None
 
-        # --- CLIP stage: run full 20-category classification ---
+        # Run full 20-category CLIP classification
         try:
             inputs = self.image_analyzer.processor(
-                text=CLIP_CATEGORY_PROMPTS,
-                images=image,
-                return_tensors="pt",
-                padding=True,
+                text=CLIP_CATEGORY_PROMPTS, images=image,
+                return_tensors="pt", padding=True,
             )
             with torch.no_grad():
-                outputs = self.image_analyzer.model(**inputs)
-                probs = outputs.logits_per_image.softmax(dim=1)
-
-            scores = {
-                label: float(probs[0][i])
-                for i, label in enumerate(CLIP_CONTENT_LABELS)
-            }
+                probs = self.image_analyzer.model(**inputs).logits_per_image.softmax(dim=1)
+            scores = {label: float(probs[0][i]) for i, label in enumerate(CLIP_CONTENT_LABELS)}
             best_label = max(scores, key=scores.get)
             best_score = scores[best_label]
             print(f"  CLIP enhance: {best_label} ({best_score:.1%})")
@@ -3064,60 +3073,32 @@ class ContentBasedFileOrganizer:
             print(f"  CLIP enhance error: {e}")
             return None
 
-        # --- High confidence: map directly, skip OCR ---
-        if best_score >= CLIP_ENHANCE_HIGH_THRESHOLD:
-            mapping = CLIP_LABEL_TO_ORGANIZER.get(best_label)
-            if mapping:
-                cat, subcat = mapping
-                # GPS + geographic label → upgrade to travel
-                if (
-                    image_metadata
-                    and image_metadata.get("gps_coordinates")
-                    and best_label in (
-                        "a landscape or nature scene",
-                        "a cityscape or urban scene",
-                        "a building or architecture",
-                    )
-                ):
-                    cat, subcat = "media", "photos_travel"
-                print(f"  CLIP enhance → {cat}/{subcat} (high confidence)")
-                return (cat, subcat)
+        if best_score < CLIP_ENHANCE_THRESHOLD:
+            return None
 
-        # --- OCR stage: try text extraction for medium-confidence CLIP ---
-        if best_score < CLIP_ENHANCE_HIGH_THRESHOLD and self.ocr_available:
+        # High confidence — map directly, skip OCR
+        if best_score >= CLIP_ENHANCE_HIGH_THRESHOLD:
+            result = self._map_clip_label(best_label, image_metadata)
+            if result:
+                print(f"  CLIP enhance → {result[0]}/{result[1]} (high confidence)")
+                return result
+
+        # Medium confidence — try OCR first, fall back to CLIP mapping
+        if self.ocr_available:
             try:
                 ocr_text = self.extract_text_from_image(file_path)
                 if ocr_text and len(ocr_text) >= 30:
-                    text_cat, text_subcat, _, _ = self.classifier.classify_content(
-                        ocr_text, file_path.name
-                    )
+                    text_cat, text_subcat, _, _ = self.classifier.classify_content(ocr_text, file_path.name)
                     if text_cat != "uncategorized":
                         print(f"  CLIP enhance → {text_cat}/{text_subcat} (OCR fallback)")
                         return (text_cat, text_subcat)
             except Exception as e:
                 print(f"  CLIP enhance OCR error: {e}")
 
-        # --- Medium confidence: use CLIP mapping ---
-        if best_score >= CLIP_ENHANCE_THRESHOLD:
-            mapping = CLIP_LABEL_TO_ORGANIZER.get(best_label)
-            if mapping:
-                cat, subcat = mapping
-                # GPS + geographic label → upgrade to travel
-                if (
-                    image_metadata
-                    and image_metadata.get("gps_coordinates")
-                    and best_label in (
-                        "a landscape or nature scene",
-                        "a cityscape or urban scene",
-                        "a building or architecture",
-                    )
-                ):
-                    cat, subcat = "media", "photos_travel"
-                print(f"  CLIP enhance → {cat}/{subcat} (medium confidence)")
-                return (cat, subcat)
-
-        # Below threshold: keep original weak classification
-        return None
+        result = self._map_clip_label(best_label, image_metadata)
+        if result:
+            print(f"  CLIP enhance → {result[0]}/{result[1]} (medium confidence)")
+        return result
 
     def detect_file_category(self, file_path: Path) -> Tuple[str, str, str, str, Optional[str], List[str], Dict[str, Any]]:
         """
