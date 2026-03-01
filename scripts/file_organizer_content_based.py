@@ -2557,7 +2557,8 @@ class ContentBasedFileOrganizer:
                               'report', 'metrics', 'dashboard', 'distribution', 'histogram',
                               'timeline', 'funnel', 'heatmap', 'treemap', 'scatter', 'trend',
                               'forecast', 'summary', 'overview', 'statistics', 'benchmark'}
-            if re.match(r'^[a-z]+$', stem) and len(stem) > 2 and stem not in data_viz_terms:
+            branding_terms = {'logo', 'logos', 'logotype', 'favicon', 'brandmark', 'wordmark'}
+            if re.match(r'^[a-z]+$', stem) and len(stem) > 2 and stem not in data_viz_terms and stem not in branding_terms:
                 print(f"  ✓ Filename pattern: Game asset (single word)")
                 return ('game_assets', 'sprites', None, [])
             # Pattern: data visualization single word
@@ -2575,7 +2576,7 @@ class ContentBasedFileOrganizer:
             # Pattern: Logo images (logo-..., logotype-..., *-logo.png)
             if 'logo' in stem or 'logotype' in stem:
                 print(f"  ✓ Filename pattern: Logo image")
-                return ('media', 'photos_logos', None, [])
+                return ('organization', 'other', 'Integrity Studio', [])
             # Pattern: Leora Home Health stock photos (LHH-OG-*, nurse-*, medical-*)
             if stem.startswith('lhh-') or stem.startswith('lhh_'):
                 print(f"  ✓ Filename pattern: Leora Home Health asset")
