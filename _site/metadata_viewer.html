@@ -134,19 +134,19 @@
             <div class="filters-grid">
                 <div class="filter-group">
                     <label for="searchInput">Search</label>
-                    <input type="text" id="searchInput" name="searchInput" placeholder="Filename, company, path..." oninput="debounceFilter()">
+                    <input type="text" id="searchInput" placeholder="Filename, company, path..." oninput="debounceFilter()">
                 </div>
                 <div class="filter-group">
                     <label for="categoryFilter">Category</label>
-                    <select id="categoryFilter" name="categoryFilter" onchange="applyFilters()"><option value="">All Categories</option></select>
+                    <select id="categoryFilter" onchange="applyFilters()"><option value="">All Categories</option></select>
                 </div>
                 <div class="filter-group">
                     <label for="subcategoryFilter">Subcategory</label>
-                    <select id="subcategoryFilter" name="subcategoryFilter" onchange="applyFilters()"><option value="">All Subcategories</option></select>
+                    <select id="subcategoryFilter" onchange="applyFilters()"><option value="">All Subcategories</option></select>
                 </div>
                 <div class="filter-group">
                     <label for="statusFilter">Status</label>
-                    <select id="statusFilter" name="statusFilter" onchange="applyFilters()">
+                    <select id="statusFilter" onchange="applyFilters()">
                         <option value="">All</option>
                         <option value="organized">Organized</option>
                         <option value="already_organized">Already Organized</option>

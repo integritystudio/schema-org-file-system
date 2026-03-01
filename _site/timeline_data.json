@@ -1,5 +1,5 @@
 {
-  "generated_at": "2025-12-10T16:15:28.864227",
+  "generated_at": "2026-02-28T21:17:16.447016",
   "cumulative": {
     "total_sessions": 14,
     "total_files": 41614,
@@ -8,23 +8,23 @@
     "top_categories": [
       {
         "name": "sprites",
-        "count": 14482
+        "count": 122717
       },
       {
         "name": "textures",
-        "count": 5986
+        "count": 25853
       },
       {
-        "name": "photos_social",
-        "count": 447
+        "name": "Technical/JavaScript/SoftwareSourceCode",
+        "count": 18120
       },
       {
-        "name": "photos_other",
-        "count": 266
+        "name": "Technical/Python/SoftwareSourceCode",
+        "count": 10696
       },
       {
-        "name": "audio",
-        "count": 228
+        "name": "Technical/Python/Documentation",
+        "count": 7253
       }
     ]
   },
@@ -45,7 +45,15 @@
       "total_processing_time_sec": 0.0,
       "id_short": "862197af",
       "success_rate": 0.0,
-      "categories": [],
+      "categories": [
+        {
+          "name": "data",
+          "color": null,
+          "icon": null,
+          "count": 1,
+          "avg_confidence": 1.0
+        }
+      ],
       "schema_types": [
         {
           "schema_type": "ImageObject",
@@ -173,6 +181,34 @@
       "success_rate": 0.4,
       "categories": [
         {
+          "name": "sprites",
+          "color": null,
+          "icon": null,
+          "count": 872,
+          "avg_confidence": 1.0
+        },
+        {
+          "name": "data",
+          "color": null,
+          "icon": null,
+          "count": 106,
+          "avg_confidence": 1.0
+        },
+        {
+          "name": "graphics",
+          "color": null,
+          "icon": null,
+          "count": 75,
+          "avg_confidence": 1.0
+        },
+        {
+          "name": "audio_other",
+          "color": null,
+          "icon": null,
+          "count": 68,
+          "avg_confidence": 1.0
+        },
+        {
           "name": "textures",
           "color": null,
           "icon": null,
@@ -183,14 +219,21 @@
           "name": "photos_other",
           "color": null,
           "icon": null,
-          "count": 24,
+          "count": 31,
           "avg_confidence": 1.0
         },
         {
           "name": "contracts",
           "color": null,
           "icon": null,
-          "count": 21,
+          "count": 22,
+          "avg_confidence": 1.0
+        },
+        {
+          "name": "templates",
+          "color": null,
+          "icon": null,
+          "count": 17,
           "avg_confidence": 1.0
         },
         {
@@ -201,45 +244,10 @@
           "avg_confidence": 1.0
         },
         {
-          "name": "tax",
-          "color": null,
-          "icon": null,
-          "count": 8,
-          "avg_confidence": 1.0
-        },
-        {
-          "name": "Technical/Logs/Uncategorized",
-          "color": null,
-          "icon": null,
-          "count": 7,
-          "avg_confidence": 1.0
-        },
-        {
-          "name": "identification",
-          "color": null,
-          "icon": null,
-          "count": 7,
-          "avg_confidence": 1.0
-        },
-        {
-          "name": "other",
-          "color": null,
-          "icon": null,
-          "count": 6,
-          "avg_confidence": 1.0
-        },
-        {
           "name": "documentation",
           "color": null,
           "icon": null,
-          "count": 3,
-          "avg_confidence": 1.0
-        },
-        {
-          "name": "records",
-          "color": null,
-          "icon": null,
-          "count": 3,
+          "count": 9,
           "avg_confidence": 1.0
         }
       ],
@@ -454,6 +462,13 @@
       "success_rate": 1.6,
       "categories": [
         {
+          "name": "audio_other",
+          "color": null,
+          "icon": null,
+          "count": 1,
+          "avg_confidence": 1.0
+        },
+        {
           "name": "photos_screenshots",
           "color": null,
           "icon": null,
@@ -577,6 +592,13 @@
           "color": null,
           "icon": null,
           "count": 12,
+          "avg_confidence": 1.0
+        },
+        {
+          "name": "audio_other",
+          "color": null,
+          "icon": null,
+          "count": 1,
           "avg_confidence": 1.0
         }
       ],
@@ -832,7 +854,7 @@
           "name": "sprites",
           "color": null,
           "icon": null,
-          "count": 14038,
+          "count": 14039,
           "avg_confidence": 1.0
         },
         {
@@ -885,17 +907,17 @@
           "avg_confidence": 1.0
         },
         {
-          "name": "corporate",
+          "name": "healthcare",
           "color": null,
           "icon": null,
-          "count": 3,
+          "count": 9,
           "avg_confidence": 1.0
         },
         {
-          "name": "clients",
+          "name": "photos_stock",
           "color": null,
           "icon": null,
-          "count": 3,
+          "count": 7,
           "avg_confidence": 1.0
         }
       ],
