@@ -99,6 +99,35 @@ CONTENT_TO_EXISTING_FOLDER: dict[str, str] = {
   "abstract art or pattern": "CreativeWork/VisualArtwork",
 }
 
+# --- Enhanced image classification for weak results ---
+# Maps CLIP content labels to organizer (category, subcategory) tuples.
+# Used by enhance_weak_image_classification() to rescue photos_other / uncategorized images.
+CLIP_LABEL_TO_ORGANIZER: dict[str, tuple[str, str]] = {
+  "a landscape or nature scene": ("media", "photos_nature"),
+  "an animal or pet":            ("media", "photos_nature"),
+  "a cityscape or urban scene":  ("media", "photos_travel"),
+  "a building or architecture":  ("media", "photos_travel"),
+  "food or a meal":              ("media", "photos_lifestyle"),
+  "sports or physical activity": ("media", "photos_lifestyle"),
+  "people or portrait":          ("media", "photos_social"),
+  "screenshot: a computer screen": ("media", "photos_screenshots"),
+  "screenshot: a mobile phone":  ("media", "photos_screenshots"),
+  "a document or text":          ("media", "photos_documents"),
+  "a diagram or chart":          ("technical", "data_visualization"),
+  "a logo or brand image":       ("creative", "branding"),
+  "artwork or illustration":     ("creative", "design"),
+  "abstract art or pattern":     ("creative", "design"),
+  "a game or entertainment":     ("game_assets", "sprites"),
+  "an interior room":            ("property_management", "other"),
+  "an event or celebration":     ("media", "photos_events"),
+  "a product or object":         ("media", "photos_products"),
+  "a vehicle or transportation": ("media", "photos_other"),
+  "a meme or social media image": ("media", "photos_social"),
+}
+
+CLIP_ENHANCE_THRESHOLD = 0.15      # min confidence to use CLIP result
+CLIP_ENHANCE_HIGH_THRESHOLD = 0.30  # confidence to skip OCR fallback
+
 # Content type -> short abbreviation (from add_content_descriptions.py)
 CONTENT_ABBREVIATIONS: dict[str, str] = {
   "an animal or pet": "pet",

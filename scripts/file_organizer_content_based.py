@@ -160,6 +160,19 @@ except ImportError:
         INFO = 'info'
         DEBUG = 'debug'
 
+# CLIP enhancement constants for weak image classification
+try:
+    from shared.constants import (
+        CLIP_CATEGORY_PROMPTS,
+        CLIP_CONTENT_LABELS,
+        CLIP_LABEL_TO_ORGANIZER,
+        CLIP_ENHANCE_THRESHOLD,
+        CLIP_ENHANCE_HIGH_THRESHOLD,
+    )
+    ENHANCED_CLIP_AVAILABLE = True
+except ImportError:
+    ENHANCED_CLIP_AVAILABLE = False
+
 
 class ContentClassifier:
     """Classifies document content into categories."""
@@ -1369,6 +1382,7 @@ class ContentBasedFileOrganizer:
                 'data': 'Technical/Data',
                 'logs': 'Technical/Logs',
                 'web': 'Technical/Web',
+                'software_packages': 'Technical/Software_Packages',
                 'other': 'Technical/Other'
             },
             'creative': {
@@ -1433,6 +1447,9 @@ class ContentBasedFileOrganizer:
                     'facebook': 'Media/Photos/Facebook',
                     'logos': 'Media/Photos/Logos',
                     'stock': 'Media/Photos/Stock',
+                    'nature': 'Media/Photos/Nature',
+                    'lifestyle': 'Media/Photos/Lifestyle',
+                    'products': 'Media/Photos/Products',
                     'other': 'Media/Photos/Other'
                 },
                 'videos': {
@@ -2234,6 +2251,15 @@ class ContentBasedFileOrganizer:
             return ('technical', 'other', None, [])
 
         # =========================================================
+        # SOFTWARE PACKAGES: .dmg, .pkg, .msi, .deb, .rpm, .exe, .app
+        # =========================================================
+        software_extensions = {'.dmg', '.pkg', '.msi', '.deb', '.rpm', '.exe',
+                               '.app', '.snap', '.flatpak', '.appimage'}
+        if ext in software_extensions:
+            print(f"  ✓ Filename pattern: Software package ({ext})")
+            return ('technical', 'software_packages', None, [])
+
+        # =========================================================
         # LEGAL DOCUMENTS: Agreement, CLA, Operating, Reseller, Severance
         # =========================================================
         legal_patterns = [
@@ -2996,6 +3022,103 @@ class ContentBasedFileOrganizer:
 
         return ""
 
+    def enhance_weak_image_classification(
+        self, file_path: Path, image_metadata: Dict = None
+    ) -> Optional[Tuple[str, str]]:
+        """Run full 20-category CLIP + OCR fallback for weakly classified images.
+
+        Only called for images that would otherwise land in photos_other or uncategorized.
+        Returns (category, subcategory) or None to keep original classification.
+        """
+        if not ENHANCED_CLIP_AVAILABLE or not self.image_analyzer.vision_available:
+            return None
+        if self.image_analyzer.model is None or self.image_analyzer.processor is None:
+            return None
+
+        try:
+            image = Image.open(file_path)
+        except Exception as e:
+            print(f"  CLIP enhance: cannot open image: {e}")
+            return None
+
+        # --- CLIP stage: run full 20-category classification ---
+        try:
+            inputs = self.image_analyzer.processor(
+                text=CLIP_CATEGORY_PROMPTS,
+                images=image,
+                return_tensors="pt",
+                padding=True,
+            )
+            with torch.no_grad():
+                outputs = self.image_analyzer.model(**inputs)
+                probs = outputs.logits_per_image.softmax(dim=1)
+
+            scores = {
+                label: float(probs[0][i])
+                for i, label in enumerate(CLIP_CONTENT_LABELS)
+            }
+            best_label = max(scores, key=scores.get)
+            best_score = scores[best_label]
+            print(f"  CLIP enhance: {best_label} ({best_score:.1%})")
+        except Exception as e:
+            print(f"  CLIP enhance error: {e}")
+            return None
+
+        # --- High confidence: map directly, skip OCR ---
+        if best_score >= CLIP_ENHANCE_HIGH_THRESHOLD:
+            mapping = CLIP_LABEL_TO_ORGANIZER.get(best_label)
+            if mapping:
+                cat, subcat = mapping
+                # GPS + geographic label → upgrade to travel
+                if (
+                    image_metadata
+                    and image_metadata.get("gps_coordinates")
+                    and best_label in (
+                        "a landscape or nature scene",
+                        "a cityscape or urban scene",
+                        "a building or architecture",
+                    )
+                ):
+                    cat, subcat = "media", "photos_travel"
+                print(f"  CLIP enhance → {cat}/{subcat} (high confidence)")
+                return (cat, subcat)
+
+        # --- OCR stage: try text extraction for medium-confidence CLIP ---
+        if best_score < CLIP_ENHANCE_HIGH_THRESHOLD and self.ocr_available:
+            try:
+                ocr_text = self.extract_text_from_image(file_path)
+                if ocr_text and len(ocr_text) >= 30:
+                    text_cat, text_subcat, _, _ = self.classifier.classify_content(
+                        ocr_text, file_path.name
+                    )
+                    if text_cat != "uncategorized":
+                        print(f"  CLIP enhance → {text_cat}/{text_subcat} (OCR fallback)")
+                        return (text_cat, text_subcat)
+            except Exception as e:
+                print(f"  CLIP enhance OCR error: {e}")
+
+        # --- Medium confidence: use CLIP mapping ---
+        if best_score >= CLIP_ENHANCE_THRESHOLD:
+            mapping = CLIP_LABEL_TO_ORGANIZER.get(best_label)
+            if mapping:
+                cat, subcat = mapping
+                # GPS + geographic label → upgrade to travel
+                if (
+                    image_metadata
+                    and image_metadata.get("gps_coordinates")
+                    and best_label in (
+                        "a landscape or nature scene",
+                        "a cityscape or urban scene",
+                        "a building or architecture",
+                    )
+                ):
+                    cat, subcat = "media", "photos_travel"
+                print(f"  CLIP enhance → {cat}/{subcat} (medium confidence)")
+                return (cat, subcat)
+
+        # Below threshold: keep original weak classification
+        return None
+
     def detect_file_category(self, file_path: Path) -> Tuple[str, str, str, str, Optional[str], List[str], Dict[str, Any]]:
         """
         Detect file category based on content.
@@ -3036,6 +3159,11 @@ class ContentBasedFileOrganizer:
             # Handle skip category for duplicates
             if category == 'skip':
                 return ('skip', subcategory, schema_type, '', None, [], {})
+            # Point A: enhance weak photos_other from filename patterns for images
+            if subcategory == 'photos_other' and schema_type == 'ImageObject':
+                enhanced = self.enhance_weak_image_classification(file_path)
+                if enhanced:
+                    return (enhanced[0], enhanced[1], schema_type, '', None, [], {})
             return (category, subcategory, schema_type, '', company_name, people_names, {})
 
         # PRIORITY 1: Organization and Person detection for document-type files
@@ -3137,6 +3265,12 @@ class ContentBasedFileOrganizer:
         media_classification = self.classify_media_file(file_path, image_metadata)
         if media_classification:
             category, media_type, subcategory = media_classification
+            # Point B: enhance weak photos/other for images
+            if media_type == 'photos' and subcategory == 'other':
+                enhanced = self.enhance_weak_image_classification(file_path, image_metadata)
+                if enhanced:
+                    print(f"  ✓ Enhanced media: {enhanced[0]}/{enhanced[1]}")
+                    return (enhanced[0], enhanced[1], schema_type, '', None, [], image_metadata)
             print(f"  ✓ Media file detected: {media_type}/{subcategory}")
             return (category, f"{media_type}_{subcategory}", schema_type, '', None, [], image_metadata)
 
@@ -3179,6 +3313,13 @@ class ContentBasedFileOrganizer:
         else:
             print(f"  No text extracted, using filename")
             category, subcategory, company_name, people_names = self.classifier.classify_content("", file_path.name)
+
+        # Point C: last-resort enhancement for uncategorized images
+        if category == 'uncategorized' and schema_type == 'ImageObject':
+            enhanced = self.enhance_weak_image_classification(file_path, image_metadata)
+            if enhanced:
+                print(f"  ✓ Enhanced uncategorized: {enhanced[0]}/{enhanced[1]}")
+                return (enhanced[0], enhanced[1], schema_type, extracted_text, None, [], image_metadata)
 
         return (category, subcategory, schema_type, extracted_text, company_name, people_names, image_metadata)
 
