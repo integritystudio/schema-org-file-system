@@ -680,6 +680,19 @@ class ContentClassifier:
         filename_lower = filename.lower()
         combined = f"{text_lower} {filename_lower}"
 
+        # Check for known companies in text (canonical name mapping)
+        known_text_companies = {
+            'capital city village': ('organization', 'property_management', 'Capital City Village'),
+            'leora home health': ('organization', 'healthcare', 'Leora Home Health'),
+            'integrity studio': ('organization', 'vendors', 'Integrity Studio'),
+            'inspired movement': ('organization', 'vendors', 'Inspired Movement'),
+            'new beginnings child development': ('organization', 'vendors', 'New Beginnings Child Development Center'),
+            'zouk': ('zouk', 'events', None),
+        }
+        for phrase, (cat, subcat, canonical_name) in known_text_companies.items():
+            if phrase in text_lower:
+                return (cat, subcat, canonical_name, self.extract_people_names(text))
+
         # Extract company names and people names
         company_names = self.extract_company_names(text)
         primary_company = company_names[0] if company_names else None
@@ -1392,6 +1405,11 @@ class ContentBasedFileOrganizer:
                 'other': 'Creative/Other'
             },
             'property_management': 'Property_Management',
+            'zouk': {
+                'events': 'Zouk/Events',
+                'classes': 'Zouk/Classes',
+                'other': 'Zouk/Other'
+            },
             # Organization: root folder with entity-named subfolders
             # Structure: Organization/{OrgName}/ for most types
             # Exception: Organization/Clients/{OrgName}/ for clients (nested)
@@ -1402,6 +1420,7 @@ class ContentBasedFileOrganizer:
                 'employers': 'Organization',
                 'government': 'Organization',
                 'healthcare': 'Organization',
+                'property_management': 'Organization',
                 'financial': 'Organization',
                 'educational': 'Organization',
                 'nonprofit': 'Organization',
@@ -2019,6 +2038,10 @@ class ContentBasedFileOrganizer:
             'integrity_studio': ('organization', 'other', 'Integrity Studio'),
             'integrity-studio': ('organization', 'other', 'Integrity Studio'),
             'integritycrm': ('organization', 'other', 'Integrity Studio'),
+            'inspiredmovement': ('organization', 'vendors', 'Inspired Movement'),
+            'inspired_movement': ('organization', 'vendors', 'Inspired Movement'),
+            'inspired-movement': ('organization', 'vendors', 'Inspired Movement'),
+            'inspired': ('organization', 'vendors', 'Inspired Movement'),
         }
         for pattern, (category, subcategory, company_name) in company_patterns.items():
             if pattern in stem:
@@ -2216,6 +2239,9 @@ class ContentBasedFileOrganizer:
             'fisterra': ('organization', 'vendors', 'Fisterra'),
             'dotfun': ('organization', 'vendors', 'DotFun'),
             'ensco': ('organization', 'vendors', 'EnsoCo'),
+            'capitalcityvillage': ('organization', 'property_management', 'Capital City Village'),
+            'capital_city_village': ('organization', 'property_management', 'Capital City Village'),
+            'capital-city-village': ('organization', 'property_management', 'Capital City Village'),
             'google': ('organization', 'vendors', 'Google'),
             'microsoft': ('organization', 'vendors', 'Microsoft'),
             'adobe': ('organization', 'vendors', 'Adobe Systems'),
@@ -2833,11 +2859,11 @@ class ContentBasedFileOrganizer:
             return ('person', 'travel', None, [])
 
         # =========================================================
-        # ORGANIZATION EVENTS: Zouk/Fisterra events
+        # ZOUK: Dance events and classes
         # =========================================================
         if 'zouk' in stem:
-            print(f"  ✓ Filename pattern: Fisterra/Zouk event")
-            return ('organization', 'other', 'Fisterra', [])
+            print(f"  ✓ Filename pattern: Zouk")
+            return ('zouk', 'events', None, [])
 
         # =========================================================
         # LEGAL/CONTRACT DOCUMENTS: DPA, NDA, SLA, TOS, MSA, SOW
