@@ -1456,7 +1456,17 @@ class ContentBasedFileOrganizer:
             },
             'media': {
                 'photos': {
-                    'screenshots': 'Media/Photos/Screenshots',
+                    'screenshots': {
+                        'browser': 'Media/Photos/Screenshots/Browser',
+                        'terminal': 'Media/Photos/Screenshots/Terminal',
+                        'code': 'Media/Photos/Screenshots/CodeEditors',
+                        'docs': 'Media/Photos/Screenshots/Docs',
+                        'settings': 'Media/Photos/Screenshots/Settings',
+                        'products': 'Media/Photos/Screenshots/Products',
+                        'dashboard': 'Media/Photos/Screenshots/Dashboards',
+                        'chat': 'Media/Photos/Screenshots/Chat',
+                        'other': 'Media/Photos/Screenshots',
+                    },
                     'travel': 'Media/Photos/Travel',
                     'portraits': 'Media/Photos/Portraits',
                     'events': 'Media/Photos/Events',
@@ -2131,7 +2141,7 @@ class ContentBasedFileOrganizer:
         # =========================================================
         if 'screenshot' in stem:
             print(f"  ✓ Filename pattern: Screenshot")
-            return ('media', 'photos_screenshots', None, [])
+            return ('media', 'photos_screenshots_other', None, [])
 
         # =========================================================
         # SURVEYS: Survey/questionnaire documents → Business/Other
@@ -2556,25 +2566,28 @@ class ContentBasedFileOrganizer:
             if is_software_screenshot:
                 if stem.startswith('dashboard_'):
                     print(f"  ✓ Filename pattern: Software dashboard screenshot")
-                    return ('media', 'photos_screenshots', None, [])
+                    return ('media', 'photos_screenshots_dashboard', None, [])
                 elif stem.startswith('terminal_'):
                     print(f"  ✓ Filename pattern: Terminal screenshot")
-                    return ('media', 'photos_screenshots', None, [])
+                    return ('media', 'photos_screenshots_terminal', None, [])
                 elif stem.startswith('browser_'):
                     print(f"  ✓ Filename pattern: Browser screenshot")
-                    return ('media', 'photos_screenshots', None, [])
+                    return ('media', 'photos_screenshots_browser', None, [])
                 elif stem.startswith('code_'):
                     print(f"  ✓ Filename pattern: Code editor screenshot")
-                    return ('media', 'photos_screenshots', None, [])
+                    return ('media', 'photos_screenshots_code', None, [])
                 elif stem.startswith('docs_'):
                     print(f"  ✓ Filename pattern: Documentation screenshot")
-                    return ('media', 'photos_screenshots', None, [])
+                    return ('media', 'photos_screenshots_docs', None, [])
                 elif stem.startswith(('shop_', 'product_')):
-                    print(f"  ✓ Filename pattern: E-commerce screenshot")
-                    return ('media', 'photos_screenshots', None, [])
-                elif stem.startswith(('chat_', 'settings_')):
-                    print(f"  ✓ Filename pattern: App screenshot")
-                    return ('media', 'photos_screenshots', None, [])
+                    print(f"  ✓ Filename pattern: Product screenshot")
+                    return ('media', 'photos_screenshots_products', None, [])
+                elif stem.startswith('chat_'):
+                    print(f"  ✓ Filename pattern: Chat screenshot")
+                    return ('media', 'photos_screenshots_chat', None, [])
+                elif stem.startswith('settings_'):
+                    print(f"  ✓ Filename pattern: Settings screenshot")
+                    return ('media', 'photos_screenshots_settings', None, [])
                 elif stem.startswith(('landing_', 'infographic_')):
                     print(f"  ✓ Filename pattern: Marketing screenshot")
                     return ('business', 'marketing', None, [])
@@ -3412,14 +3425,29 @@ class ContentBasedFileOrganizer:
             relative_path = subcategory
         # Special handling for media files with nested structure
         elif category == 'media' and '_' in subcategory:
-            # subcategory format: "media_type_subcategory" (e.g., "photos_screenshots")
+            # subcategory format: "photos_screenshots" or "photos_screenshots_browser"
             parts = subcategory.split('_', 1)  # Split into at most 2 parts
             if len(parts) == 2:
                 media_type, media_subcat = parts
                 if media_type in self.category_paths['media']:
                     media_dict = self.category_paths['media'][media_type]
                     if isinstance(media_dict, dict):
-                        relative_path = media_dict.get(media_subcat, media_dict.get('other', f'Media/{media_type.capitalize()}/Other'))
+                        # Check for 3-level nesting (e.g., screenshots_browser)
+                        if '_' in media_subcat:
+                            parent_key, child_key = media_subcat.split('_', 1)
+                            parent_val = media_dict.get(parent_key)
+                            if isinstance(parent_val, dict):
+                                relative_path = parent_val.get(child_key, parent_val.get('other', f'Media/{media_type.capitalize()}/{parent_key.capitalize()}'))
+                            else:
+                                relative_path = media_dict.get(media_subcat, media_dict.get('other', f'Media/{media_type.capitalize()}/Other'))
+                        else:
+                            val = media_dict.get(media_subcat)
+                            if isinstance(val, dict):
+                                relative_path = val.get('other', f'Media/{media_type.capitalize()}/{media_subcat.capitalize()}')
+                            elif val:
+                                relative_path = val
+                            else:
+                                relative_path = media_dict.get('other', f'Media/{media_type.capitalize()}/Other')
                     else:
                         relative_path = media_dict
                 else:
