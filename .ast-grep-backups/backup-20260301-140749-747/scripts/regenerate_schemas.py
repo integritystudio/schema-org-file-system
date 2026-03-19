@@ -258,7 +258,7 @@ def verify_schemas(conn: sqlite3.Connection) -> bool:
                 has_id += 1
             else:
                 missing_id += 1
-        except Exception:
+        except:
             missing_id += 1
 
     total = has_id + missing_id

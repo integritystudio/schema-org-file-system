@@ -26,6 +26,8 @@ import functools
 from typing import Optional, Dict, Any, Callable
 from contextlib import contextmanager
 
+from constants import DEFAULT_TRACES_SAMPLE_RATE, DEFAULT_PROFILES_SAMPLE_RATE
+
 # Sentry SDK import with graceful degradation
 try:
     import sentry_sdk
@@ -52,8 +54,8 @@ class ErrorLevel:
 def init_sentry(
     dsn: Optional[str] = None,
     environment: Optional[str] = None,
-    traces_sample_rate: float = 0.1,
-    profiles_sample_rate: float = 0.1,
+    traces_sample_rate: float = DEFAULT_TRACES_SAMPLE_RATE,
+    profiles_sample_rate: float = DEFAULT_PROFILES_SAMPLE_RATE,
     enable_logs: bool = True
 ) -> bool:
     """

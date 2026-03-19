@@ -22,6 +22,14 @@ from .models import (
 )
 from .graph_store import GraphStore
 from .kv_store import KeyValueStorage
+from constants import (
+    SHA256_HEX_LENGTH,
+    UUID_STRING_LENGTH,
+    SHORT_FIELD_LENGTH,
+    SEPARATOR_WIDTH_SMALL,
+    SEPARATOR_WIDTH_MEDIUM,
+    MIGRATION_VERIFICATION_THRESHOLD,
+)
 
 
 class JSONMigrator:
@@ -65,9 +73,9 @@ class JSONMigrator:
             Migration statistics
         """
         if verbose:
-            print("=" * 60)
+            print("=" * SEPARATOR_WIDTH_MEDIUM)
             print("JSON to Database Migration")
-            print("=" * 60)
+            print("=" * SEPARATOR_WIDTH_MEDIUM)
 
         # Find all JSON files
         json_files = sorted(self.results_dir.glob('*.json'))
@@ -158,7 +166,7 @@ class JSONMigrator:
 
         try:
             org_session = OrganizationSession(
-                id=hashlib.sha256(str(file_path).encode()).hexdigest()[:64],
+                id=hashlib.sha256(str(file_path).encode()).hexdigest()[:SHA256_HEX_LENGTH],
                 started_at=session_timestamp,
                 completed_at=session_timestamp,
                 dry_run=data.get('dry_run', False),
@@ -481,7 +489,7 @@ class JSONMigrator:
         print(f"  Cost reports stored:    {self.stats['cost_reports']}")
         print(f"  Other files stored:     {self.stats['other_files']}")
         print(f"  Errors:                 {self.stats['errors']}")
-        print("=" * 60)
+        print("=" * SEPARATOR_WIDTH_MEDIUM)
 
     def verify_migration(self, verbose: bool = True) -> Dict[str, Any]:
         """
@@ -523,7 +531,7 @@ class JSONMigrator:
             print(f"  Database companies:        {db_stats['total_companies']}")
 
             # Check match
-            if db_stats['total_files'] >= total_json_records * 0.9:
+            if db_stats['total_files'] >= total_json_records * MIGRATION_VERIFICATION_THRESHOLD:
                 print(f"\n  ✓ Migration appears successful")
             else:
                 print(f"\n  ⚠ Some records may not have migrated")
@@ -592,7 +600,7 @@ def run_migration(db_path: str = 'results/file_organization.db', dry_run: bool =
     try:
         # Phase 1: Schema Migration
         print("Phase 1: Schema Migration")
-        print("-" * 40)
+        print("-" * SEPARATOR_WIDTH_SMALL)
 
         tables_to_migrate = [
             ('files', 'VARCHAR(100)'),
@@ -638,12 +646,12 @@ def run_migration(db_path: str = 'results/file_organization.db', dry_run: bool =
             if dry_run:
                 print("  [DRY RUN] Would create merge_events table")
             else:
-                conn.execute("""
+                conn.execute(f"""
                     CREATE TABLE merge_events (
-                        id VARCHAR(36) PRIMARY KEY,
-                        target_entity_type VARCHAR(20) NOT NULL,
+                        id VARCHAR({UUID_STRING_LENGTH}) PRIMARY KEY,
+                        target_entity_type VARCHAR({SHORT_FIELD_LENGTH}) NOT NULL,
                         target_entity_id INTEGER NOT NULL,
-                        target_canonical_id VARCHAR(36),
+                        target_canonical_id VARCHAR({UUID_STRING_LENGTH}),
                         source_entity_ids JSON NOT NULL,
                         source_canonical_ids JSON,
                         merge_reason TEXT,
@@ -663,7 +671,7 @@ def run_migration(db_path: str = 'results/file_organization.db', dry_run: bool =
 
         # Phase 2: Data Backfill
         print("\nPhase 2: Data Backfill")
-        print("-" * 40)
+        print("-" * SEPARATOR_WIDTH_SMALL)
 
         # Backfill files (use urn:sha256:{id} format)
         if table_exists(conn, 'files'):
@@ -747,7 +755,7 @@ def run_migration(db_path: str = 'results/file_organization.db', dry_run: bool =
 
         # Phase 3: Create Indexes
         print("\nPhase 3: Create Indexes")
-        print("-" * 40)
+        print("-" * SEPARATOR_WIDTH_SMALL)
 
         indexes = [
             ("ix_files_canonical_id", "files", "canonical_id"),
@@ -783,9 +791,9 @@ def run_migration(db_path: str = 'results/file_organization.db', dry_run: bool =
             conn.commit()
 
         # Summary
-        print("\n" + "=" * 40)
+        print("\n" + "=" * SEPARATOR_WIDTH_SMALL)
         print("Migration Summary")
-        print("=" * 40)
+        print("=" * SEPARATOR_WIDTH_SMALL)
         total_backfilled = sum(v for k, v in stats.items() if 'backfilled' in k)
         print(f"  Records backfilled: {total_backfilled}")
         print(f"  Indexes created: {stats.get('indexes_created', 0)}")

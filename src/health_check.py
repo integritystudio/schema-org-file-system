@@ -9,6 +9,8 @@ import shutil
 from dataclasses import dataclass
 from typing import Optional
 
+from constants import SEPARATOR_WIDTH_MEDIUM
+
 
 @dataclass
 class FeatureStatus:
@@ -283,9 +285,9 @@ class SystemHealthChecker:
         available_count = sum(1 for f in self.features.values() if f.available)
         total_count = len(self.features)
 
-        print("\n" + "=" * 60)
+        print("\n" + "=" * SEPARATOR_WIDTH_MEDIUM)
         print("SYSTEM HEALTH CHECK")
-        print("=" * 60)
+        print("=" * SEPARATOR_WIDTH_MEDIUM)
 
         for feature in self.features.values():
             status = "\033[92m[OK]\033[0m" if feature.available else "\033[91m[--]\033[0m"
@@ -298,7 +300,7 @@ class SystemHealthChecker:
                 if not feature.available:
                     print(f"       Impact: {feature.impact}")
 
-        print("-" * 60)
+        print("-" * SEPARATOR_WIDTH_MEDIUM)
         print(f"Features available: {available_count}/{total_count}")
 
         if available_count == total_count:
@@ -307,7 +309,7 @@ class SystemHealthChecker:
             missing = total_count - available_count
             print(f"\033[93m{missing} feature(s) unavailable - see above for install commands\033[0m")
 
-        print("=" * 60 + "\n")
+        print("=" * SEPARATOR_WIDTH_MEDIUM + "\n")
 
     def to_dict(self) -> dict:
         """Export status as dictionary."""

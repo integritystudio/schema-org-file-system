@@ -26,6 +26,8 @@ from typing import Optional
 from urllib.parse import quote
 from pathlib import Path
 
+from constants import SHA256_HEX_LENGTH, URN_UUID_PREFIX
+
 
 # Namespace UUIDs for deterministic ID generation (UUID v5)
 # These are fixed UUIDs that serve as namespaces for generating
@@ -271,7 +273,7 @@ def normalize_to_iri(value: str) -> str:
         pass
 
     # Treat as SHA-256 hash if 64 hex characters
-    if len(value) == 64 and all(c in '0123456789abcdef' for c in value.lower()):
+    if len(value) == SHA256_HEX_LENGTH and all(c in '0123456789abcdef' for c in value.lower()):
         return f"urn:sha256:{value}"
 
     # Fallback: wrap in urn:uuid: with generated UUID from value
@@ -302,8 +304,8 @@ def extract_uuid_from_iri(iri: str) -> Optional[str]:
     if not iri:
         return None
 
-    if iri.startswith('urn:uuid:'):
-        return iri[9:]  # Remove 'urn:uuid:' prefix
+    if iri.startswith(URN_UUID_PREFIX):
+        return iri[len(URN_UUID_PREFIX):]
 
     if iri.startswith(('http://', 'https://')):
         # Extract last path segment

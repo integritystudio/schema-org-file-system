@@ -175,7 +175,7 @@ class FileFeatureExtractor:
 
     def _hash_filename(self, filename: str) -> str:
         """Create a hash of the filename for deduplication."""
-        return hashlib.md5(filename.encode()).hexdigest()[:8]
+        return hashlib.sha256(filename.encode()).hexdigest()[:8]
 
 
 class DataPreprocessor:

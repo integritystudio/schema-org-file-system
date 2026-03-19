@@ -13,6 +13,8 @@ from typing import List, Dict, Any, Optional
 from pathlib import Path
 from collections import defaultdict
 
+from constants import COST_DECIMAL_PLACES
+
 
 class TimelineAPI:
     """API for fetching and formatting timeline data."""
@@ -288,7 +290,7 @@ class TimelineAPI:
         """Calculate cost per file."""
         if session['total_files'] == 0:
             return 0.0
-        return round(session['total_cost'] / session['total_files'], 4)
+        return round(session['total_cost'] / session['total_files'], COST_DECIMAL_PLACES)
 
     def export_to_json(self, output_path: str = "_site/timeline_data.json"):
         """

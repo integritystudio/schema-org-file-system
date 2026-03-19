@@ -13,6 +13,7 @@ from pathlib import Path
 from contextlib import contextmanager
 
 from cost_roi_calculator import CostROICalculator, CostTracker
+from constants import SEPARATOR_WIDTH_LARGE, SEPARATOR_WIDTH_SMALL
 
 
 # Global calculator instance for easy integration
@@ -266,9 +267,9 @@ def organize_directories(self, source_dirs: List[str], dry_run: bool = False, li
 
 def print_integration_guide():
     """Print guide for integrating cost tracking."""
-    print("=" * 70)
+    print("=" * SEPARATOR_WIDTH_LARGE)
     print("COST TRACKING INTEGRATION GUIDE")
-    print("=" * 70)
+    print("=" * SEPARATOR_WIDTH_LARGE)
     print("""
 To add cost tracking to your file organizer, you have several options:
 
@@ -348,7 +349,7 @@ print(f"Estimated cost: ${estimate['total_estimated_cost']:.2f}")
 print(f"Estimated time: {estimate['total_estimated_time_human']}")
 print(f"Estimated ROI: {estimate['estimated_roi']:.0f}%")
 """)
-    print("=" * 70)
+    print("=" * SEPARATOR_WIDTH_LARGE)
 
 
 if __name__ == '__main__':

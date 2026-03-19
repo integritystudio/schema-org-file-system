@@ -1,0 +1,27 @@
+{
+  "backup_id": "backup-20260301-140124-879",
+  "timestamp": "2026-03-01T14:01:24.879508",
+  "files": [
+    {
+      "original": "/Users/alyshialedlie/schema-org-file-system/scripts/screenshot_renamer.py",
+      "relative": "scripts/screenshot_renamer.py",
+      "backup": "/Users/alyshialedlie/schema-org-file-system/.ast-grep-backups/backup-20260301-140124-879/scripts/screenshot_renamer.py"
+    },
+    {
+      "original": "/Users/alyshialedlie/schema-org-file-system/examples/example_usage.py",
+      "relative": "examples/example_usage.py",
+      "backup": "/Users/alyshialedlie/schema-org-file-system/.ast-grep-backups/backup-20260301-140124-879/examples/example_usage.py"
+    },
+    {
+      "original": "/Users/alyshialedlie/schema-org-file-system/src/enrichment.py",
+      "relative": "src/enrichment.py",
+      "backup": "/Users/alyshialedlie/schema-org-file-system/.ast-grep-backups/backup-20260301-140124-879/src/enrichment.py"
+    },
+    {
+      "original": "/Users/alyshialedlie/schema-org-file-system/scripts/regenerate_schemas.py",
+      "relative": "scripts/regenerate_schemas.py",
+      "backup": "/Users/alyshialedlie/schema-org-file-system/.ast-grep-backups/backup-20260301-140124-879/scripts/regenerate_schemas.py"
+    }
+  ],
+  "project_folder": "/Users/alyshialedlie/schema-org-file-system/"
+}

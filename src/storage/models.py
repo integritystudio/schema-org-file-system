@@ -32,6 +32,16 @@ import hashlib
 import json
 import uuid
 
+from constants import (
+    SHA256_HEX_LENGTH,
+    UUID_STRING_LENGTH,
+    MAX_STRING_LENGTH,
+    SHORT_STRING_LENGTH,
+    SHORT_FIELD_LENGTH,
+    GEOHASH_MAX_LENGTH,
+    BASE_PATH_MAX_LENGTH,
+)
+
 
 # Namespace UUIDs for deterministic ID generation (UUID v5)
 # These match the namespaces in src/uri_utils.py for consistency
@@ -73,7 +83,7 @@ class RelationshipType(enum.Enum):
 file_categories = Table(
     'file_categories',
     Base.metadata,
-    Column('file_id', String(64), ForeignKey('files.id'), primary_key=True),
+    Column('file_id', String(SHA256_HEX_LENGTH), ForeignKey('files.id'), primary_key=True),
     Column('category_id', Integer, ForeignKey('categories.id'), primary_key=True),
     Column('confidence', Float, default=1.0),
     Column('created_at', DateTime, default=datetime.utcnow)
@@ -82,19 +92,19 @@ file_categories = Table(
 file_companies = Table(
     'file_companies',
     Base.metadata,
-    Column('file_id', String(64), ForeignKey('files.id'), primary_key=True),
+    Column('file_id', String(SHA256_HEX_LENGTH), ForeignKey('files.id'), primary_key=True),
     Column('company_id', Integer, ForeignKey('companies.id'), primary_key=True),
     Column('confidence', Float, default=1.0),
-    Column('context', String(255)),  # How the company was detected
+    Column('context', String(MAX_STRING_LENGTH)),  # How the company was detected
     Column('created_at', DateTime, default=datetime.utcnow)
 )
 
 file_people = Table(
     'file_people',
     Base.metadata,
-    Column('file_id', String(64), ForeignKey('files.id'), primary_key=True),
+    Column('file_id', String(SHA256_HEX_LENGTH), ForeignKey('files.id'), primary_key=True),
     Column('person_id', Integer, ForeignKey('people.id'), primary_key=True),
-    Column('role', String(50)),  # author, subject, mentioned, etc.
+    Column('role', String(SHORT_STRING_LENGTH)),  # author, subject, mentioned, etc.
     Column('confidence', Float, default=1.0),
     Column('created_at', DateTime, default=datetime.utcnow)
 )
@@ -102,9 +112,9 @@ file_people = Table(
 file_locations = Table(
     'file_locations',
     Base.metadata,
-    Column('file_id', String(64), ForeignKey('files.id'), primary_key=True),
+    Column('file_id', String(SHA256_HEX_LENGTH), ForeignKey('files.id'), primary_key=True),
     Column('location_id', Integer, ForeignKey('locations.id'), primary_key=True),
-    Column('location_type', String(50)),  # captured_at, mentioned, subject
+    Column('location_type', String(SHORT_STRING_LENGTH)),  # captured_at, mentioned, subject
     Column('confidence', Float, default=1.0),
     Column('created_at', DateTime, default=datetime.utcnow)
 )
@@ -124,7 +134,7 @@ class File(Base):
     __tablename__ = 'files'
 
     # Primary key is hash of original path
-    id = Column(String(64), primary_key=True)
+    id = Column(String(SHA256_HEX_LENGTH), primary_key=True)
 
     # Public canonical ID for JSON-LD @id (urn:sha256:{hash} format)
     canonical_id = Column(String(100), unique=True, index=True)
@@ -133,15 +143,15 @@ class File(Base):
     source_ids = Column(JSON, default=list)
 
     # File identification
-    filename = Column(String(255), nullable=False, index=True)
+    filename = Column(String(MAX_STRING_LENGTH), nullable=False, index=True)
     original_path = Column(Text, nullable=False)
     current_path = Column(Text)  # Where it is now (after organization)
-    file_extension = Column(String(20), index=True)
+    file_extension = Column(String(SHORT_FIELD_LENGTH), index=True)
     mime_type = Column(String(100))
 
     # File properties
     file_size = Column(Integer)
-    content_hash = Column(String(64), index=True)  # SHA-256 of content
+    content_hash = Column(String(SHA256_HEX_LENGTH), index=True)  # SHA-256 of content
     created_at = Column(DateTime)
     modified_at = Column(DateTime)
     organized_at = Column(DateTime)
@@ -155,7 +165,7 @@ class File(Base):
     extracted_text_length = Column(Integer, default=0)
 
     # Schema.org metadata (stored as JSON)
-    schema_type = Column(String(50))  # ImageObject, Document, etc.
+    schema_type = Column(String(SHORT_STRING_LENGTH))  # ImageObject, Document, etc.
     schema_data = Column(JSON)
 
     # Image-specific metadata
@@ -172,7 +182,7 @@ class File(Base):
 
     # Processing metadata
     processing_time_sec = Column(Float)
-    session_id = Column(String(64), ForeignKey('organization_sessions.id'))
+    session_id = Column(String(SHA256_HEX_LENGTH), ForeignKey('organization_sessions.id'))
 
     # Timestamps
     db_created_at = Column(DateTime, default=datetime.utcnow)
@@ -272,7 +282,7 @@ class Category(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     # Canonical UUID for JSON-LD @id (deterministic from name)
-    canonical_id = Column(String(36), unique=True, index=True)
+    canonical_id = Column(String(UUID_STRING_LENGTH), unique=True, index=True)
 
     # Historical IDs for merge tracking and deduplication
     source_ids = Column(JSON, default=list)
@@ -283,12 +293,12 @@ class Category(Base):
     name = Column(String(100), nullable=False, unique=True, index=True)
     parent_id = Column(Integer, ForeignKey('categories.id'))
     description = Column(Text)
-    icon = Column(String(50))  # Emoji or icon name
-    color = Column(String(20))  # Hex color
+    icon = Column(String(SHORT_STRING_LENGTH))  # Emoji or icon name
+    color = Column(String(SHORT_FIELD_LENGTH))  # Hex color
 
     # Hierarchy
     level = Column(Integer, default=0)  # 0 = root, 1 = subcategory, etc.
-    full_path = Column(String(255), index=True)  # e.g., "Legal/Contracts"
+    full_path = Column(String(MAX_STRING_LENGTH), index=True)  # e.g., "Legal/Contracts"
 
     # Statistics
     file_count = Column(Integer, default=0)
@@ -352,7 +362,7 @@ class Company(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     # Canonical UUID for JSON-LD @id (deterministic from normalized name)
-    canonical_id = Column(String(36), unique=True, index=True)
+    canonical_id = Column(String(UUID_STRING_LENGTH), unique=True, index=True)
 
     # Historical IDs for merge tracking and deduplication
     source_ids = Column(JSON, default=list)
@@ -360,9 +370,9 @@ class Company(Base):
     # Merge tracking: if this company was merged into another
     merged_into_id = Column(Integer, ForeignKey('companies.id'))
 
-    name = Column(String(255), nullable=False, index=True)
-    normalized_name = Column(String(255), unique=True, index=True)  # Lowercase, trimmed
-    domain = Column(String(255))  # Company website domain
+    name = Column(String(MAX_STRING_LENGTH), nullable=False, index=True)
+    normalized_name = Column(String(MAX_STRING_LENGTH), unique=True, index=True)  # Lowercase, trimmed
+    domain = Column(String(MAX_STRING_LENGTH))  # Company website domain
     industry = Column(String(100))
 
     # Statistics
@@ -427,7 +437,7 @@ class Person(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     # Canonical UUID for JSON-LD @id (deterministic from normalized name)
-    canonical_id = Column(String(36), unique=True, index=True)
+    canonical_id = Column(String(UUID_STRING_LENGTH), unique=True, index=True)
 
     # Historical IDs for merge tracking and deduplication
     source_ids = Column(JSON, default=list)
@@ -435,9 +445,9 @@ class Person(Base):
     # Merge tracking: if this person was merged into another
     merged_into_id = Column(Integer, ForeignKey('people.id'))
 
-    name = Column(String(255), nullable=False, index=True)
-    normalized_name = Column(String(255), unique=True, index=True)
-    email = Column(String(255))
+    name = Column(String(MAX_STRING_LENGTH), nullable=False, index=True)
+    normalized_name = Column(String(MAX_STRING_LENGTH), unique=True, index=True)
+    email = Column(String(MAX_STRING_LENGTH))
     role = Column(String(100))  # Default role
 
     # Statistics
@@ -498,7 +508,7 @@ class Location(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     # Canonical UUID for JSON-LD @id (deterministic from name)
-    canonical_id = Column(String(36), unique=True, index=True)
+    canonical_id = Column(String(UUID_STRING_LENGTH), unique=True, index=True)
 
     # Historical IDs for merge tracking and deduplication
     source_ids = Column(JSON, default=list)
@@ -506,7 +516,7 @@ class Location(Base):
     # Merge tracking: if this location was merged into another
     merged_into_id = Column(Integer, ForeignKey('locations.id'))
 
-    name = Column(String(255), nullable=False, index=True)
+    name = Column(String(MAX_STRING_LENGTH), nullable=False, index=True)
     city = Column(String(100))
     state = Column(String(100))
     country = Column(String(100))
@@ -514,7 +524,7 @@ class Location(Base):
     longitude = Column(Float)
 
     # Geohash for efficient spatial queries
-    geohash = Column(String(12), index=True)
+    geohash = Column(String(GEOHASH_MAX_LENGTH), index=True)
 
     # Statistics
     file_count = Column(Integer, default=0)
@@ -572,8 +582,8 @@ class FileRelationship(Base):
     __tablename__ = 'file_relationships'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    source_file_id = Column(String(64), ForeignKey('files.id'), nullable=False, index=True)
-    target_file_id = Column(String(64), ForeignKey('files.id'), nullable=False, index=True)
+    source_file_id = Column(String(SHA256_HEX_LENGTH), ForeignKey('files.id'), nullable=False, index=True)
+    target_file_id = Column(String(SHA256_HEX_LENGTH), ForeignKey('files.id'), nullable=False, index=True)
     relationship_type = Column(SQLEnum(RelationshipType), nullable=False, index=True)
 
     # Relationship metadata
@@ -602,14 +612,14 @@ class OrganizationSession(Base):
     """
     __tablename__ = 'organization_sessions'
 
-    id = Column(String(64), primary_key=True)  # UUID
+    id = Column(String(SHA256_HEX_LENGTH), primary_key=True)  # UUID
     started_at = Column(DateTime, default=datetime.utcnow, index=True)
     completed_at = Column(DateTime)
     dry_run = Column(Boolean, default=False)
 
     # Session parameters
     source_directories = Column(JSON)  # List of source paths
-    base_path = Column(String(500))
+    base_path = Column(String(BASE_PATH_MAX_LENGTH))
     file_limit = Column(Integer)
 
     # Statistics
@@ -647,10 +657,10 @@ class CostRecord(Base):
     __tablename__ = 'cost_records'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    session_id = Column(String(64), ForeignKey('organization_sessions.id'), index=True)
-    file_id = Column(String(64), ForeignKey('files.id'), index=True)
+    session_id = Column(String(SHA256_HEX_LENGTH), ForeignKey('organization_sessions.id'), index=True)
+    file_id = Column(String(SHA256_HEX_LENGTH), ForeignKey('files.id'), index=True)
 
-    feature_name = Column(String(50), nullable=False, index=True)
+    feature_name = Column(String(SHORT_STRING_LENGTH), nullable=False, index=True)
     processing_time_sec = Column(Float, nullable=False)
     cost = Column(Float, default=0.0)
     success = Column(Boolean, default=True)
@@ -677,11 +687,11 @@ class SchemaMetadata(Base):
     __tablename__ = 'schema_metadata'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    file_id = Column(String(64), ForeignKey('files.id'), unique=True, index=True)
+    file_id = Column(String(SHA256_HEX_LENGTH), ForeignKey('files.id'), unique=True, index=True)
 
     # Schema.org properties
-    schema_type = Column(String(50), index=True)  # @type
-    schema_context = Column(String(255), default='https://schema.org')
+    schema_type = Column(String(SHORT_STRING_LENGTH), index=True)  # @type
+    schema_context = Column(String(MAX_STRING_LENGTH), default='https://schema.org')
     schema_json = Column(JSON, nullable=False)  # Full JSON-LD
 
     # Validation
@@ -706,13 +716,13 @@ class KeyValueStore(Base):
     __tablename__ = 'key_value_store'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    namespace = Column(String(50), nullable=False, index=True)  # e.g., 'config', 'cache', 'temp'
-    key = Column(String(255), nullable=False)
+    namespace = Column(String(SHORT_STRING_LENGTH), nullable=False, index=True)  # e.g., 'config', 'cache', 'temp'
+    key = Column(String(MAX_STRING_LENGTH), nullable=False)
     value = Column(JSON)
-    value_type = Column(String(20))  # 'string', 'int', 'float', 'json', 'binary'
+    value_type = Column(String(SHORT_FIELD_LENGTH))  # 'string', 'int', 'float', 'json', 'binary'
 
     # Optional association with a file
-    file_id = Column(String(64), ForeignKey('files.id'), index=True)
+    file_id = Column(String(SHA256_HEX_LENGTH), ForeignKey('files.id'), index=True)
 
     # TTL support
     expires_at = Column(DateTime)
@@ -755,12 +765,12 @@ class MergeEvent(Base):
     """
     __tablename__ = 'merge_events'
 
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(String(UUID_STRING_LENGTH), primary_key=True, default=lambda: str(uuid.uuid4()))
 
     # Target entity (canonical/surviving)
     target_entity_type = Column(SQLEnum(MergeEventType), nullable=False, index=True)
     target_entity_id = Column(Integer, nullable=False)  # Internal DB ID
-    target_canonical_id = Column(String(36))  # UUID for JSON-LD @id
+    target_canonical_id = Column(String(UUID_STRING_LENGTH))  # UUID for JSON-LD @id
 
     # Source entities being merged (list of internal IDs)
     source_entity_ids = Column(JSON, nullable=False)

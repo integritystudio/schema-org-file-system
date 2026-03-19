@@ -171,11 +171,24 @@ class ValidationReport:
     def print_summary(self) -> None:
         """Print validation summary."""
         stats = self.get_statistics()
+        print(f"\n{'='*60}")
+        print(f"Schema.org Validation Report: {self.schema_type}")
+        print(f"{'='*60}")
+        print(f"Status: {'VALID' if self.is_valid() else 'INVALID'}")
+        print(f"Duration: {self.get_duration():.3f}s")
+        print(f"\nStatistics:")
+        print(f"  Total messages: {stats['total']}")
+        print(f"  Errors: {stats['errors']}")
+        print(f"  Warnings: {stats['warnings']}")
+        print(f"  Info: {stats['info']}")
+        print(f"  Success: {stats['success']}")
 
         if self.messages:
+            print(f"\nMessages:")
             for msg in self.messages:
                 print(f"  {msg}")
 
+        print(f"{'='*60}\n")
 
     def __str__(self) -> str:
         """String representation."""

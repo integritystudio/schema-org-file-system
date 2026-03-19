@@ -234,8 +234,8 @@ class ScreenshotAnalyzer:
         """Get a short hash of image content for uniqueness."""
         try:
             with open(image_path, 'rb') as f:
-                return hashlib.sha256(f.read()).hexdigest()[:8]
-        except Exception:
+                return hashlib.md5(f.read()).hexdigest()[:8]
+        except:
             return datetime.now().strftime("%H%M%S")
 
     def analyze_image(self, image_path: Path) -> Dict:

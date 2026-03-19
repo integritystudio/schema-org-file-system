@@ -22,6 +22,12 @@ from .models import (
     SchemaMetadata, KeyValueStore, FileStatus, RelationshipType,
     file_categories, file_companies, file_people, file_locations
 )
+from constants import (
+    COORDINATE_TOLERANCE_DEG,
+    DEFAULT_SEARCH_LIMIT,
+    KM_PER_DEGREE_LATITUDE,
+    TOP_EXTENSIONS_LIMIT,
+)
 
 
 class GraphStore:
@@ -585,8 +591,8 @@ class GraphStore:
             if latitude and longitude:
                 location = session.query(Location).filter(
                     and_(
-                        func.abs(Location.latitude - latitude) < 0.001,
-                        func.abs(Location.longitude - longitude) < 0.001
+                        func.abs(Location.latitude - latitude) < COORDINATE_TOLERANCE_DEG,
+                        func.abs(Location.longitude - longitude) < COORDINATE_TOLERANCE_DEG
                     )
                 ).first()
                 if location:
@@ -973,7 +979,7 @@ class GraphStore:
             extension_counts = session.query(
                 File.file_extension,
                 func.count(File.id)
-            ).group_by(File.file_extension).order_by(func.count(File.id).desc()).limit(20).all()
+            ).group_by(File.file_extension).order_by(func.count(File.id).desc()).limit(TOP_EXTENSIONS_LIMIT).all()
 
             stats['extensions'] = {ext or 'none': count for ext, count in extension_counts}
 
@@ -1060,7 +1066,7 @@ class GraphStore:
         query: str,
         search_content: bool = True,
         search_filename: bool = True,
-        limit: int = 50,
+        limit: int = DEFAULT_SEARCH_LIMIT,
         session: Session = None
     ) -> List[File]:
         """
@@ -1104,7 +1110,7 @@ class GraphStore:
         latitude: float,
         longitude: float,
         radius_km: float = 10,
-        limit: int = 50,
+        limit: int = DEFAULT_SEARCH_LIMIT,
         session: Session = None
     ) -> List[File]:
         """
@@ -1127,8 +1133,8 @@ class GraphStore:
 
         try:
             # Approximate degrees per km (varies by latitude)
-            lat_delta = radius_km / 111.0
-            lon_delta = radius_km / (111.0 * abs(latitude) if latitude else 111.0)
+            lat_delta = radius_km / KM_PER_DEGREE_LATITUDE
+            lon_delta = radius_km / (KM_PER_DEGREE_LATITUDE * abs(latitude) if latitude else KM_PER_DEGREE_LATITUDE)
 
             return session.query(File)\
                 .filter(

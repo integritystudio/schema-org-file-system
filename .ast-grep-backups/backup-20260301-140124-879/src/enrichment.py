@@ -12,8 +12,6 @@ import mimetypes
 import hashlib
 import uuid
 
-from constants import SECONDS_PER_HOUR, SECONDS_PER_MINUTE
-
 
 class MetadataEnricher:
     """
@@ -204,7 +202,7 @@ class MetadataEnricher:
                     date_str = exif_data[field].replace(':', '-', 2)
                     metadata['dateCreated'] = date_str
                     break
-                except Exception:
+                except:
                     pass
 
         # Location
@@ -605,9 +603,9 @@ class MetadataEnricher:
         Returns:
             ISO 8601 duration string (e.g., 'PT1H30M')
         """
-        hours = int(seconds // SECONDS_PER_HOUR)
-        minutes = int((seconds % SECONDS_PER_HOUR) // SECONDS_PER_MINUTE)
-        secs = int(seconds % SECONDS_PER_MINUTE)
+        hours = int(seconds // 3600)
+        minutes = int((seconds % 3600) // 60)
+        secs = int(seconds % 60)
 
         parts = ['PT']
         if hours > 0:
@@ -662,7 +660,7 @@ class MetadataEnricher:
             if hasattr(generator, 'set_property'):
                 try:
                     generator.set_property(key, value)
-                except Exception:
+                except:
                     pass  # Skip properties that can't be set
 
         return generator

@@ -397,7 +397,7 @@ def example_8_metadata_enrichment():
     for key, value in merged.items():
         try:
             doc.set_property(key, value)
-        except Exception:
+        except:
             pass
 
     print("\nEnriched JSON-LD Output:")
