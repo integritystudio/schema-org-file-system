@@ -107,6 +107,27 @@ flowchart LR
 - [DEPENDENCIES](docs/DEPENDENCIES.md) - Installation guide
 - [ARCHITECTURE_REFACTOR](docs/ARCHITECTURE_REFACTOR.md) - Design decisions
 
+## Changelog
+
+### v1.4.0 (Recent)
+
+**Features**
+- Typed subdirectories for screenshot categories
+- Enhanced weak image classification with full CLIP + OCR fallback
+- Shared utilities module consolidating 576 lines of duplication
+
+**Fixes**
+- Route profile.png → Portraits, REWORK.png → Data Visualization
+- Route logo images → Organization/Integrity Studio
+- Legal/contract detection before event pattern matching
+- All 20 content types covered in organize_to_existing.py
+
+**Docs**
+- Visual architecture diagrams with mermaid flowcharts
+- System overview, database schema, and module dependencies
+
+**See full history:** `git log --oneline` | **Last commit:** 4b8f578 (2026-03-19)
+
 ## Environment Variables
 
 | Variable | Description |
