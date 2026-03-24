@@ -5,7 +5,7 @@ Extracts and enriches file metadata from various sources including
 EXIF, document properties, NLP results, and embeddings.
 """
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Union
 from datetime import datetime
 from pathlib import Path
 import mimetypes

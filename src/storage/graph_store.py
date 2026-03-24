@@ -9,18 +9,17 @@ relationships using a graph-like structure built on SQLAlchemy.
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple, Union
+from typing import Dict, List, Optional, Any, Tuple
 from collections import defaultdict
 
-from sqlalchemy import create_engine, event, func, and_, or_, text
+from sqlalchemy import create_engine, event, func, and_, or_
 from sqlalchemy.orm import Session, sessionmaker, joinedload
 from sqlalchemy.exc import IntegrityError
 
 from .models import (
     Base, File, Category, Company, Person, Location,
     OrganizationSession, FileRelationship, CostRecord,
-    SchemaMetadata, KeyValueStore, FileStatus, RelationshipType,
-    file_categories, file_companies, file_people, file_locations
+    FileStatus, RelationshipType, file_categories
 )
 from constants import (
     COORDINATE_TOLERANCE_DEG,

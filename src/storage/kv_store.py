@@ -8,10 +8,8 @@ Supports namespacing, TTL, and JSON values.
 Design allows easy migration to Redis/Memcached in the future.
 """
 
-import json
-import hashlib
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 from contextlib import contextmanager
 
 from sqlalchemy import create_engine, event, func, and_

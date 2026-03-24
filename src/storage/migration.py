@@ -10,15 +10,14 @@ import json
 import hashlib
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from collections import defaultdict
 
 from sqlalchemy.orm import Session
 
 from .models import (
-    File, Category, Company, Person, Location,
-    OrganizationSession, CostRecord, SchemaMetadata,
-    FileStatus, RelationshipType
+    File, Person,
+    OrganizationSession, FileStatus
 )
 from .graph_store import GraphStore
 from .kv_store import KeyValueStorage

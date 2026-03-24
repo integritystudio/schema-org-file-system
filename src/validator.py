@@ -6,7 +6,7 @@ checks required properties, verifies data types, and generates
 comprehensive validation reports.
 """
 
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional
 from enum import Enum
 from datetime import datetime
 import re
