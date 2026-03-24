@@ -315,7 +315,7 @@ class TimelineAPI:
         return output_path
 
 
-def main():
+def main() -> None:
     """CLI entry point for generating timeline data."""
     import argparse
 

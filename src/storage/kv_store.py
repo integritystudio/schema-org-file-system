@@ -9,7 +9,7 @@ Design allows easy migration to Redis/Memcached in the future.
 """
 
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Generator
 from contextlib import contextmanager
 
 from sqlalchemy import create_engine, event, func, and_
@@ -52,7 +52,7 @@ class KeyValueStorage:
 
         # SQLite optimizations
         @event.listens_for(self.engine, "connect")
-        def set_sqlite_pragma(dbapi_connection, connection_record):
+        def set_sqlite_pragma(dbapi_connection: Any, connection_record: Any) -> None:
             cursor = dbapi_connection.cursor()
             cursor.execute("PRAGMA foreign_keys=ON")
             cursor.execute("PRAGMA journal_mode=WAL")
@@ -68,7 +68,7 @@ class KeyValueStorage:
         return self.SessionLocal()
 
     @contextmanager
-    def session_scope(self):
+    def session_scope(self) -> Generator[Session, None, None]:
         """Provide a transactional scope around a series of operations."""
         session = self.get_session()
         try:

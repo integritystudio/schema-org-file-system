@@ -8,7 +8,7 @@ file organization system with minimal code changes required.
 
 import time
 from functools import wraps
-from typing import Callable, Optional, Dict, Any
+from typing import Callable, Optional, Dict, Any, Generator
 from pathlib import Path
 from contextlib import contextmanager
 
@@ -28,13 +28,13 @@ def get_calculator() -> CostROICalculator:
     return _global_calculator
 
 
-def reset_calculator():
+def reset_calculator() -> None:
     """Reset the global calculator (useful for testing)."""
     global _global_calculator
     _global_calculator = None
 
 
-def track_cost(feature_name: str, files_processed: int = 1):
+def track_cost(feature_name: str, files_processed: int = 1) -> Callable:
     """
     Decorator to track costs for a function.
 
@@ -48,9 +48,9 @@ def track_cost(feature_name: str, files_processed: int = 1):
         feature_name: Name of the feature being tracked
         files_processed: Number of files processed per call
     """
-    def decorator(func: Callable):
+    def decorator(func: Callable) -> Callable:
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             calculator = get_calculator()
             with CostTracker(calculator, feature_name, files_processed):
                 return func(*args, **kwargs)
@@ -63,7 +63,7 @@ def track_feature(
     feature_name: str,
     files_processed: int = 1,
     file_path: Optional[Path] = None
-):
+) -> Generator[None, None, None]:
     """
     Context manager for tracking feature costs.
 
@@ -96,7 +96,7 @@ def record_feature_usage(
     files_processed: int = 1,
     success: bool = True,
     error_message: Optional[str] = None
-):
+) -> None:
     """
     Manually record feature usage.
 
@@ -124,12 +124,12 @@ def get_cost_report() -> Dict[str, Any]:
     return get_calculator().generate_report()
 
 
-def print_cost_summary():
+def print_cost_summary() -> None:
     """Print the cost summary."""
     get_calculator().print_summary()
 
 
-def save_cost_report(output_path: str):
+def save_cost_report(output_path: str) -> None:
     """Save the cost report to a file."""
     get_calculator().generate_report(output_path)
 
@@ -176,7 +176,7 @@ class FeatureTracker:
         self.errors = {}
 
     @contextmanager
-    def track(self, feature_name: str, files: int = 1):
+    def track(self, feature_name: str, files: int = 1) -> Generator[None, None, None]:
         """Track a specific feature."""
         start = time.time()
         success = True
@@ -265,7 +265,7 @@ def organize_directories(self, source_dirs: List[str], dry_run: bool = False, li
 '''
 
 
-def print_integration_guide():
+def print_integration_guide() -> None:
     """Print guide for integrating cost tracking."""
     print("=" * SEPARATOR_WIDTH_LARGE)
     print("COST TRACKING INTEGRATION GUIDE")

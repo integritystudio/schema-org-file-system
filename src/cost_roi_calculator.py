@@ -659,7 +659,7 @@ class CostROICalculator:
 
         return report
 
-    def print_summary(self):
+    def print_summary(self) -> None:
         """Print a formatted summary of costs and ROI."""
         print("\n" + "=" * 70)
         print("COST & ROI SUMMARY REPORT")
@@ -733,11 +733,11 @@ class CostTracker:
         self.success = True
         self.error_message = None
 
-    def __enter__(self):
+    def __enter__(self) -> 'CostTracker':
         self.start_time = time.time()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> bool:
         processing_time = time.time() - self.start_time
 
         if exc_type is not None:
@@ -757,7 +757,7 @@ class CostTracker:
         return False  # Don't suppress exceptions
 
 
-def main():
+def main() -> None:
     """Demo the cost calculator with sample data."""
     import random
 

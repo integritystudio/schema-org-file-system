@@ -17,12 +17,13 @@ Usage:
 import argparse
 import sys
 from pathlib import Path
+from typing import List, Any
 
 # Add src directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
 
-def cmd_content(args):
+def cmd_content(args: Any) -> None:
     """Run content-based organization using AI/OCR."""
     # Import here to avoid loading heavy dependencies until needed
     sys.path.insert(0, str(Path(__file__).parent.parent / 'scripts'))
@@ -33,7 +34,7 @@ def cmd_content(args):
     content_main()
 
 
-def cmd_name(args):
+def cmd_name(args: Any) -> None:
     """Run name-based organization (no AI)."""
     sys.path.insert(0, str(Path(__file__).parent.parent / 'scripts'))
     from file_organizer_by_name import main as name_main
@@ -42,7 +43,7 @@ def cmd_name(args):
     name_main()
 
 
-def cmd_type(args):
+def cmd_type(args: Any) -> None:
     """Run type-based organization by file extension."""
     sys.path.insert(0, str(Path(__file__).parent.parent / 'scripts'))
     from file_organizer_by_type import main as type_main
@@ -51,7 +52,7 @@ def cmd_type(args):
     type_main()
 
 
-def cmd_preprocess(args):
+def cmd_preprocess(args: Any) -> None:
     """Run ML data preprocessing."""
     sys.path.insert(0, str(Path(__file__).parent.parent / 'scripts'))
     from data_preprocessing import main as preprocess_main
@@ -60,7 +61,7 @@ def cmd_preprocess(args):
     preprocess_main()
 
 
-def cmd_evaluate(args):
+def cmd_evaluate(args: Any) -> None:
     """Run model evaluation."""
     sys.path.insert(0, str(Path(__file__).parent.parent / 'scripts'))
     from evaluate_model import main as evaluate_main
@@ -69,7 +70,7 @@ def cmd_evaluate(args):
     evaluate_main()
 
 
-def cmd_migrate(args):
+def cmd_migrate(args: Any) -> None:
     """Run database migration for ID generation."""
     from storage.migration import run_migration
 
@@ -81,13 +82,13 @@ def cmd_migrate(args):
     print("\nMigration complete. Canonical IDs have been generated for existing records.")
 
 
-def cmd_health(args):
+def cmd_health(args: Any) -> None:
     """Run system health check."""
     from health_check import check_system
     check_system(verbose=True)
 
 
-def cmd_update_site(args):
+def cmd_update_site(args: Any) -> None:
     """Update _site dashboard data."""
     sys.path.insert(0, str(Path(__file__).parent.parent / 'scripts'))
     from update_site_data import main as update_main
@@ -96,7 +97,7 @@ def cmd_update_site(args):
     update_main()
 
 
-def cmd_timeline(args):
+def cmd_timeline(args: Any) -> None:
     """Generate timeline data for visualization."""
     sys.path.insert(0, str(Path(__file__).parent.parent / 'scripts'))
     from generate_timeline_data import main as timeline_main
@@ -105,7 +106,7 @@ def cmd_timeline(args):
     timeline_main()
 
 
-def _args_to_argv(args):
+def _args_to_argv(args: Any) -> List[str]:
     """Convert argparse namespace to argv list."""
     argv = []
     for key, value in vars(args).items():
@@ -124,7 +125,7 @@ def _args_to_argv(args):
     return argv
 
 
-def main():
+def main() -> None:
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
         prog='organize-files',

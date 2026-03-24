@@ -805,7 +805,7 @@ def run_migration(db_path: str = 'results/file_organization.db', dry_run: bool =
     return dict(stats)
 
 
-def main():
+def main() -> None:
     """Run the migration."""
     import argparse
 

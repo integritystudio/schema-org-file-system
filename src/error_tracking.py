@@ -23,7 +23,7 @@ Usage:
 
 import os
 import functools
-from typing import Optional, Dict, Any, Callable
+from typing import Optional, Dict, Any, Callable, Generator
 from contextlib import contextmanager
 
 from constants import DEFAULT_TRACES_SAMPLE_RATE, DEFAULT_PROFILES_SAMPLE_RATE
@@ -36,10 +36,10 @@ try:
 except ImportError:
     SENTRY_AVAILABLE = False
     # Stub implementations
-    def capture_exception(*args, **kwargs): pass
-    def capture_message(*args, **kwargs): pass
-    def set_tag(*args, **kwargs): pass
-    def set_context(*args, **kwargs): pass
+    def capture_exception(*args: Any, **kwargs: Any) -> None: pass
+    def capture_message(*args: Any, **kwargs: Any) -> None: pass
+    def set_tag(*args: Any, **kwargs: Any) -> None: pass
+    def set_context(*args: Any, **kwargs: Any) -> None: pass
 
 
 # Error severity levels
@@ -180,8 +180,8 @@ def capture_warning(
 def track_operation(
     operation_name: str,
     op_type: str = 'task',
-    **attributes
-):
+    **attributes: Any
+) -> Generator[Any, None, None]:
     """
     Context manager for tracking operation performance.
 
@@ -228,7 +228,7 @@ def track_error(
     """
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             op_name = operation or func.__name__
             try:
                 with track_operation(op_name, op_type='function'):
@@ -271,7 +271,7 @@ class FileProcessingErrorTracker:
         self.errors: list[Dict[str, Any]] = []
 
     @contextmanager
-    def track_file(self, file_path: str, category: Optional[str] = None):
+    def track_file(self, file_path: str, category: Optional[str] = None) -> Generator[None, None, None]:
         """Track processing of a single file."""
         self.processed += 1
         context = {
@@ -302,7 +302,7 @@ class FileProcessingErrorTracker:
             )
             # Don't re-raise - continue processing other files
 
-    def print_summary(self):
+    def print_summary(self) -> None:
         """Print processing summary."""
         print(f"\nFile Processing Summary:")
         print(f"  Processed: {self.processed}")
