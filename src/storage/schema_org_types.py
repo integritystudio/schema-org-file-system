@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Pydantic models for schema.org builder utility return types.
+Pydantic models for schema.org entity and property types.
 
-Defines types for builder function outputs in schema_org_base.py
+Defines structured types for entity references, addresses, locations,
+image metadata, and relationships used in schema.org serialization.
 """
 
 from typing import Optional, List, Dict, Any
