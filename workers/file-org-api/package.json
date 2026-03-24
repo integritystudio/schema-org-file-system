@@ -1,0 +1,22 @@
+{
+  "name": "file-org-api",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Cloudflare Worker API for file organization database",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "esbuild src/index.ts --bundle --minify --outfile=dist/index.js --target=es2020",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "hono": "^4.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250220.0",
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.0.0",
+    "wrangler": "^3.30.0"
+  }
+}

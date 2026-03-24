@@ -1,0 +1,14 @@
+name = "file-org-api"
+main = "src/index.ts"
+compatibility_date = "2025-03-20"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "file-organization-db"
+database_id = "ec22b612-34da-48c7-ba44-df91875b296c"
+
+[env.production]
+name = "file-org-api-prod"
+route = "api.file-org.dev/*"
+zone_id = "YOUR_ZONE_ID"  # Update with your domain

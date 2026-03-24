@@ -9,7 +9,8 @@
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:trace": "playwright test --trace on",
-    "serve": "serve _site -l 3000"
+    "serve": "serve _site -l 3000",
+    "repomix": "bash scripts/repomix/repomix-regen.sh"
   },
   "dependencies": {
     "graphology": "^0.26.0",
