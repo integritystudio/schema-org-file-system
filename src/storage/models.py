@@ -241,6 +241,178 @@ class File(Base):
             return self.canonical_id
         return f"urn:sha256:{self.id}"
 
+    @staticmethod
+    def get_schema_type_from_mime(mime_type: Optional[str]) -> str:
+        """Select appropriate schema.org type based on MIME type."""
+        if not mime_type:
+            return "DigitalDocument"
+
+        mime_lower = mime_type.lower()
+
+        type_mapping = {
+            # Images
+            "image/jpeg": "ImageObject",
+            "image/png": "ImageObject",
+            "image/gif": "ImageObject",
+            "image/svg": "ImageObject",
+            "image/webp": "ImageObject",
+            # Video
+            "video/mp4": "VideoObject",
+            "video/mpeg": "VideoObject",
+            "video/quicktime": "VideoObject",
+            "video/webm": "VideoObject",
+            # Audio
+            "audio/mpeg": "AudioObject",
+            "audio/wav": "AudioObject",
+            "audio/ogg": "AudioObject",
+            "audio/mp4": "AudioObject",
+            # Documents
+            "application/pdf": "DigitalDocument",
+            "application/msword": "DigitalDocument",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "DigitalDocument",
+            "text/plain": "DigitalDocument",
+            "text/markdown": "DigitalDocument",
+            "text/html": "WebPage",
+            # Code
+            "application/json": "SoftwareSourceCode",
+            "application/x-python": "SoftwareSourceCode",
+            "text/x-python": "SoftwareSourceCode",
+            "text/typescript": "SoftwareSourceCode",
+        }
+
+        # Try exact match first
+        if mime_type in type_mapping:
+            return type_mapping[mime_type]
+
+        # Try prefix match
+        for mime_prefix, schema_type in type_mapping.items():
+            if mime_lower.startswith(mime_prefix.split('/')[0] + '/'):
+                return schema_type
+
+        return "DigitalDocument"
+
+    def to_schema_org(self) -> Dict[str, Any]:
+        """Convert File to schema.org JSON-LD"""
+        # Select appropriate type
+        schema_type = self.schema_type or self.get_schema_type_from_mime(self.mime_type)
+
+        result = {
+            "@context": "https://schema.org",
+            "@type": schema_type,
+            "@id": self.get_iri(),
+            "name": self.filename,
+        }
+
+        # Add optional properties if present
+        if self.created_at:
+            result["dateCreated"] = self.created_at.isoformat()
+
+        if self.modified_at:
+            result["dateModified"] = self.modified_at.isoformat()
+
+        if self.mime_type:
+            result["encodingFormat"] = self.mime_type
+
+        if self.file_size:
+            result["contentSize"] = str(self.file_size)
+
+        if self.original_path:
+            result["url"] = self.original_path
+
+        if self.extracted_text:
+            # Truncate to reasonable length for embedding
+            result["text"] = self.extracted_text[:2000]
+
+        # Add image metadata if present
+        if schema_type == "ImageObject":
+            if self.image_width:
+                result["width"] = self.image_width
+            if self.image_height:
+                result["height"] = self.image_height
+
+            if self.has_faces is not None:
+                result["hasFaces"] = self.has_faces
+
+            if self.exif_datetime:
+                result["datePublished"] = self.exif_datetime.isoformat()
+
+            if self.gps_latitude and self.gps_longitude:
+                result["contentLocation"] = {
+                    "@type": "Place",
+                    "geo": {
+                        "@type": "GeoCoordinates",
+                        "latitude": self.gps_latitude,
+                        "longitude": self.gps_longitude
+                    }
+                }
+
+        # Add relationships
+        relationships = self.build_schema_relationships()
+        if relationships:
+            result.update(relationships)
+
+        return result
+
+    def build_schema_relationships(self) -> Dict[str, Any]:
+        """Build relationships to other entities"""
+        relationships = {}
+
+        # Add categories
+        if self.categories:
+            relationships["about"] = [
+                {
+                    "@type": "DefinedTerm",
+                    "@id": cat.get_iri(),
+                    "name": cat.name
+                }
+                for cat in self.categories
+            ]
+
+        # Add companies and people
+        mentions = []
+        if self.companies:
+            mentions.extend([
+                {
+                    "@type": "Organization",
+                    "@id": comp.get_iri(),
+                    "name": comp.name
+                }
+                for comp in self.companies
+            ])
+
+        if self.people:
+            mentions.extend([
+                {
+                    "@type": "Person",
+                    "@id": person.get_iri(),
+                    "name": person.name
+                }
+                for person in self.people
+            ])
+
+        if mentions:
+            relationships["mentions"] = mentions
+
+        # Add locations
+        if self.locations:
+            if len(self.locations) == 1:
+                relationships["spatialCoverage"] = {
+                    "@type": "Place",
+                    "@id": self.locations[0].get_iri(),
+                    "name": self.locations[0].name
+                }
+            else:
+                relationships["spatialCoverage"] = [
+                    {
+                        "@type": "Place",
+                        "@id": loc.get_iri(),
+                        "name": loc.name
+                    }
+                    for loc in self.locations
+                ]
+
+        return relationships
+
     @hybrid_property
     def is_organized(self) -> bool:
         return self.status == FileStatus.ORGANIZED
@@ -334,6 +506,64 @@ class Category(Base):
         """Get the JSON-LD @id IRI for this category."""
         return f"urn:uuid:{self.canonical_id}"
 
+    def to_schema_org(self) -> Dict[str, Any]:
+        """Convert Category to schema.org JSON-LD (DefinedTerm)"""
+
+        result = {
+            "@context": "https://schema.org",
+            "@type": "DefinedTerm",
+            "@id": self.get_iri(),
+            "name": self.name,
+        }
+
+        # Add identifier (hierarchical path)
+        if self.full_path:
+            result["identifier"] = self.full_path.lower().replace('/', '-')
+
+        # Add definition/description
+        if self.description:
+            result["definition"] = self.description
+        else:
+            result["definition"] = f"Category: {self.name}"
+
+        # Add taxonomy membership
+        result["inDefinedTermSet"] = {
+            "@type": "DefinedTermSet",
+            "@id": "urn:uuid:categories-taxonomy",
+            "name": "File Organization Categories"
+        }
+
+        # Add parent category (broader)
+        if self.parent:
+            result["broader"] = {
+                "@type": "DefinedTerm",
+                "@id": self.parent.get_iri(),
+                "name": self.parent.name
+            }
+
+        # Add child categories (narrower) if loaded
+        if self.subcategories:
+            result["narrower"] = [
+                {
+                    "@type": "DefinedTerm",
+                    "@id": subcat.get_iri(),
+                    "name": subcat.name
+                }
+                for subcat in self.subcategories
+            ]
+
+        # Custom extensions
+        result["fileCount"] = self.file_count or 0
+        result["hierarchyLevel"] = self.level or 0
+
+        if self.icon:
+            result["icon"] = self.icon
+
+        if self.color:
+            result["color"] = self.color
+
+        return result
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             'id': self.id,
@@ -410,6 +640,60 @@ class Company(Base):
         """Get the JSON-LD @id IRI for this company."""
         return f"urn:uuid:{self.canonical_id}"
 
+    @staticmethod
+    def generate_wikidata_url(company_name: str) -> Optional[str]:
+        """Generate potential Wikidata URL for external reference"""
+        # This would typically call an external API
+        # For now, return a template
+        normalized = company_name.lower().replace(' ', '_')
+        return f"https://www.wikidata.org/wiki/Q{normalized}"
+
+    def to_schema_org(self) -> Dict[str, Any]:
+        """Convert Company to schema.org JSON-LD (Organization)"""
+
+        result = {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "@id": self.get_iri(),
+            "name": self.name,
+        }
+
+        # Add website URL
+        if self.domain:
+            url = self.domain if self.domain.startswith(('http://', 'https://')) else f"https://{self.domain}"
+            result["url"] = url
+
+        # Add industry/sector
+        if self.industry:
+            result["knowsAbout"] = self.industry
+
+        # Add founding date if available
+        if self.first_seen:
+            result["dateFounded"] = self.first_seen.date().isoformat()
+
+        # Add metadata timestamps
+        if self.first_seen:
+            result["dateCreated"] = self.first_seen.isoformat()
+
+        if self.last_seen:
+            result["dateModified"] = self.last_seen.isoformat()
+
+        # Add external references
+        same_as = []
+        if self.domain:
+            same_as.append(f"https://{self.domain.replace('https://', '').replace('http://', '')}")
+
+        # Add potential Wikidata/Crunchbase references
+        same_as.append(self.generate_wikidata_url(self.name))
+
+        if same_as:
+            result["sameAs"] = [url for url in same_as if url]
+
+        # Custom tracking properties
+        result["mentionCount"] = self.file_count or 0
+
+        return result
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             'id': self.id,
@@ -480,6 +764,60 @@ class Person(Base):
     def get_iri(self) -> str:
         """Get the JSON-LD @id IRI for this person."""
         return f"urn:uuid:{self.canonical_id}"
+
+    def to_schema_org(self) -> Dict[str, Any]:
+        """Convert Person to schema.org JSON-LD"""
+
+        result = {
+            "@context": "https://schema.org",
+            "@type": "Person",
+            "@id": self.get_iri(),
+            "name": self.name,
+        }
+
+        # Add email if present
+        if self.email:
+            result["email"] = self.email
+
+        # Add job title/role
+        if self.role:
+            result["jobTitle"] = self.role
+
+        # Add temporal data
+        if self.first_seen:
+            result["dateCreated"] = self.first_seen.isoformat()
+
+        if self.last_seen:
+            result["dateModified"] = self.last_seen.isoformat()
+
+        # Custom tracking
+        result["mentionCount"] = self.file_count or 0
+
+        return result
+
+    def to_schema_org_with_relationships(self,
+                                       company: Optional['Company'] = None,
+                                       location: Optional['Location'] = None) -> Dict[str, Any]:
+        """Convert Person with optional relationship references"""
+
+        result = self.to_schema_org()
+
+        # Add work relationships
+        if company:
+            result["worksFor"] = {
+                "@type": "Organization",
+                "@id": company.get_iri(),
+                "name": company.name
+            }
+
+        if location:
+            result["workLocation"] = {
+                "@type": "Place",
+                "@id": location.get_iri(),
+                "name": location.name
+            }
+
+        return result
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -557,6 +895,70 @@ class Location(Base):
     def get_iri(self) -> str:
         """Get the JSON-LD @id IRI for this location."""
         return f"urn:uuid:{self.canonical_id}"
+
+    def infer_schema_type(self) -> str:
+        """Determine if this should be Place, City, or Country"""
+        if self.city and self.state and self.country:
+            return "Place"  # Full address
+        elif self.country and not self.state and not self.city:
+            return "Country"  # Just country
+        elif self.city:
+            return "City"  # At least city specified
+        else:
+            return "Place"  # Default
+
+    def to_schema_org(self) -> Dict[str, Any]:
+        """Convert Location to schema.org JSON-LD (Place)"""
+
+        schema_type = self.infer_schema_type()
+
+        result = {
+            "@context": "https://schema.org",
+            "@type": schema_type,
+            "@id": self.get_iri(),
+            "name": self.name,
+        }
+
+        # Add structured address
+        address = {}
+        if self.city:
+            address["addressLocality"] = self.city
+        if self.state:
+            address["addressRegion"] = self.state
+        if self.country:
+            # Use country code if 2 chars, otherwise country name
+            country = self.country
+            if len(country) == 2:
+                address["addressCountry"] = country
+            else:
+                address["addressCountry"] = country[:2]  # Attempt to extract code
+
+        if address:
+            result["address"] = {
+                "@type": "PostalAddress",
+                **address
+            }
+
+        # Add geographic coordinates
+        if self.latitude is not None and self.longitude is not None:
+            result["geo"] = {
+                "@type": "GeoCoordinates",
+                "latitude": self.latitude,
+                "longitude": self.longitude
+            }
+
+        # Add custom geohash property
+        if self.geohash:
+            result["geoHash"] = self.geohash
+
+        # Add timestamp
+        if self.created_at:
+            result["dateCreated"] = self.created_at.isoformat()
+
+        # Custom tracking
+        result["mentionCount"] = self.file_count or 0
+
+        return result
 
     def to_dict(self) -> Dict[str, Any]:
         return {
