@@ -7,7 +7,6 @@ Consolidates export patterns and supports multiple output formats.
 import json
 from typing import Any, Dict, List, Optional, Type
 from pathlib import Path
-from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -74,7 +73,7 @@ class SchemaOrgExporter:
 
     if entity_classes is None:
       # Import here to avoid circular dependency
-      from models import File, Category, Company, Person, Location
+      from .models import File, Category, Company, Person, Location
       entity_classes = [File, Category, Company, Person, Location]
 
     for entity_class in entity_classes:
@@ -136,7 +135,7 @@ class SchemaOrgExporter:
 
     with open(output_path, 'w', encoding='utf-8') as f:
       if entity_classes is None:
-        from models import File, Category, Company, Person, Location
+        from .models import File, Category, Company, Person, Location
         entity_classes = [File, Category, Company, Person, Location]
 
       for entity_class in entity_classes:
@@ -169,7 +168,7 @@ class SchemaOrgExporter:
       entity_classes: List of model classes to export
     """
     if entity_classes is None:
-      from models import File, Category, Company, Person, Location
+      from .models import File, Category, Company, Person, Location
       entity_classes = [File, Category, Company, Person, Location]
 
     all_entities = []

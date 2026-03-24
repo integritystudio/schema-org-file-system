@@ -179,15 +179,17 @@ if has_faces is not None:
 
 ## Quality Metrics - Before/After
 
+**Note:** Numeric scores (0.88, 0.98, etc.) are estimated based on LLM-as-Judge qualitative assessment before and after fixes, not measured via automated metric collection.
+
 | Metric | Before | After | Change |
 |--------|--------|-------|--------|
-| JSON-LD Compliance | 0.88 | 0.98 | +11% |
-| Faithfulness | 0.90 | 0.96 | +7% |
-| Coherence | 0.95 | 0.98 | +3% |
-| Hallucination Risk | 0.12 | 0.04 | -67% |
-| Code Duplication | 1 duplicate | 0 duplicates | -100% |
-| Country Code Bug | Present | Fixed | ✅ |
-| Deprecated APIs | 1 usage | 0 usages | ✅ |
+| JSON-LD Compliance (est.) | 0.88 | 0.98 | +11% |
+| Faithfulness (est.) | 0.90 | 0.96 | +7% |
+| Coherence (est.) | 0.95 | 0.98 | +3% |
+| Hallucination Risk (est.) | 0.12 | 0.04 | -67% |
+| Code Duplication | 1 duplicate | 0 duplicates | ✅ Verified |
+| Country Code Bug | Present | Fixed | ✅ Verified |
+| Deprecated APIs | 1 usage | 0 usages | ✅ Verified |
 
 ---
 

@@ -12,8 +12,12 @@ from typing import Any, Dict, Optional
 from abc import ABC, abstractmethod
 
 
-# Standard schema.org context URL
-SCHEMA_ORG_CONTEXT = "https://schema.org"
+# Standard schema.org context with custom namespace declarations
+# Supports both standard schema.org properties and custom extensions (e.g., ml:hasFaces)
+SCHEMA_ORG_CONTEXT = {
+  "@vocab": "https://schema.org/",
+  "ml": "https://example.org/ml-properties/"
+}
 
 
 class SchemaOrgSerializable(ABC):
