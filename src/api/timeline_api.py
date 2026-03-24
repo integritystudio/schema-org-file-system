@@ -292,7 +292,7 @@ class TimelineAPI:
             return 0.0
         return round(session['total_cost'] / session['total_files'], COST_DECIMAL_PLACES)
 
-    def export_to_json(self, output_path: str = "_site/timeline_data.json"):
+    def export_to_json(self, output_path: str = "_site/timeline_data.json") -> str:
         """
         Export all session data to JSON file for static serving.
 
