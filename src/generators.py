@@ -14,6 +14,23 @@ except ImportError:
     from base import SchemaOrgBase, PropertyType
 
 
+
+def deprecated(version: str = "2.0.0"):
+    """Decorator to mark methods as deprecated, to be removed in specified version."""
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            import warnings
+            warnings.warn(
+                f"{func.__name__}() is deprecated and will be removed in v{version}. "
+                f"This method is not used internally.",
+                category=DeprecationWarning,
+                stacklevel=2
+            )
+            return func(*args, **kwargs)
+        wrapper.__name__ = func.__name__
+        return wrapper
+    return decorator
+
 # =============================================================================
 # Required Properties Constants
 # =============================================================================
@@ -195,6 +212,7 @@ class DocumentGenerator(SchemaOrgBase):
         """Recommended properties for documents."""
         return list(DOCUMENT_RECOMMENDED_PROPERTIES)
 
+    @deprecated("2.0.0")
     def set_basic_info(self, name: str, description: Optional[str] = None,
                       abstract: Optional[str] = None) -> 'DocumentGenerator':
         """
@@ -215,6 +233,7 @@ class DocumentGenerator(SchemaOrgBase):
             self.set_property("abstract", abstract, PropertyType.TEXT)
         return self
 
+    @deprecated("2.0.0")
     def set_file_info(self, encoding_format: str, url: str,
                      content_size: Optional[int] = None,
                      sha256: Optional[str] = None) -> 'DocumentGenerator':
@@ -238,6 +257,7 @@ class DocumentGenerator(SchemaOrgBase):
             self.set_identifier(sha256, "sha256")
         return self
 
+    @deprecated("2.0.0")
     def set_language(self, language: str) -> 'DocumentGenerator':
         """
         Set document language.
@@ -251,6 +271,7 @@ class DocumentGenerator(SchemaOrgBase):
         self.set_property("inLanguage", language, PropertyType.TEXT)
         return self
 
+    @deprecated("2.0.0")
     def set_pagination(self, page_count: int) -> 'DocumentGenerator':
         """
         Set document pagination.
@@ -264,6 +285,7 @@ class DocumentGenerator(SchemaOrgBase):
         self.set_property("numberOfPages", page_count, PropertyType.INTEGER)
         return self
 
+    @deprecated("2.0.0")
     def add_citation(self, citation: Union[str, Dict[str, Any]]) -> 'DocumentGenerator':
         """
         Add citation.
@@ -281,6 +303,7 @@ class DocumentGenerator(SchemaOrgBase):
         self.data["citation"].append(citation)
         return self
 
+    @deprecated("2.0.0")
     def set_scholarly_info(self, doi: Optional[str] = None,
                           issn: Optional[str] = None,
                           publication: Optional[str] = None) -> 'DocumentGenerator':
@@ -329,6 +352,7 @@ class ImageGenerator(SchemaOrgBase):
         """Recommended properties for images."""
         return list(IMAGE_RECOMMENDED_PROPERTIES)
 
+    @deprecated("2.0.0")
     def set_basic_info(self, name: str, content_url: str,
                       encoding_format: str,
                       description: Optional[str] = None,
@@ -355,6 +379,7 @@ class ImageGenerator(SchemaOrgBase):
             self.set_property("caption", caption, PropertyType.TEXT)
         return self
 
+    @deprecated("2.0.0")
     def set_dimensions(self, width: int, height: int) -> 'ImageGenerator':
         """
         Set image dimensions.
@@ -370,6 +395,7 @@ class ImageGenerator(SchemaOrgBase):
         self.set_property("height", height, PropertyType.INTEGER)
         return self
 
+    @deprecated("2.0.0")
     def set_exif_data(self, exif: Dict[str, Any]) -> 'ImageGenerator':
         """
         Set EXIF metadata.
@@ -417,6 +443,7 @@ class ImageGenerator(SchemaOrgBase):
         }
         return self
 
+    @deprecated("2.0.0")
     def add_depicted_item(self, item: Union[str, Dict[str, Any]]) -> 'ImageGenerator':
         """
         Add item depicted in the image.
@@ -458,6 +485,7 @@ class VideoGenerator(SchemaOrgBase):
         """Recommended properties for videos."""
         return list(VIDEO_RECOMMENDED_PROPERTIES)
 
+    @deprecated("2.0.0")
     def set_basic_info(self, name: str, content_url: str,
                       upload_date: datetime,
                       description: Optional[str] = None,
@@ -484,6 +512,7 @@ class VideoGenerator(SchemaOrgBase):
             self.set_property("thumbnailUrl", thumbnail_url, PropertyType.URL)
         return self
 
+    @deprecated("2.0.0")
     def set_media_details(self, duration: str, width: int, height: int,
                          encoding_format: str,
                          bitrate: Optional[str] = None) -> 'VideoGenerator':
@@ -563,6 +592,7 @@ class AudioGenerator(SchemaOrgBase):
         """Recommended properties for audio."""
         return list(AUDIO_RECOMMENDED_PROPERTIES)
 
+    @deprecated("2.0.0")
     def set_basic_info(self, name: str, content_url: str,
                       description: Optional[str] = None,
                       duration: Optional[str] = None) -> 'AudioGenerator':
@@ -586,6 +616,7 @@ class AudioGenerator(SchemaOrgBase):
             self.set_property("duration", duration, PropertyType.TEXT)
         return self
 
+    @deprecated("2.0.0")
     def set_music_info(self, album: Optional[str] = None,
                       artist: Optional[str] = None,
                       genre: Optional[str] = None,
@@ -615,6 +646,7 @@ class AudioGenerator(SchemaOrgBase):
             self.set_property("isrcCode", isrc, PropertyType.TEXT)
         return self
 
+    @deprecated("2.0.0")
     def set_podcast_info(self, episode_number: Optional[int] = None,
                         series: Optional[str] = None) -> 'AudioGenerator':
         """
@@ -661,6 +693,7 @@ class CodeGenerator(SchemaOrgBase):
         """Recommended properties for source code."""
         return list(CODE_RECOMMENDED_PROPERTIES)
 
+    @deprecated("2.0.0")
     def set_basic_info(self, name: str, programming_language: str,
                       description: Optional[str] = None,
                       code_sample: Optional[str] = None) -> 'CodeGenerator':
@@ -685,6 +718,7 @@ class CodeGenerator(SchemaOrgBase):
             self.set_property("text", code_sample, PropertyType.TEXT)
         return self
 
+    @deprecated("2.0.0")
     def set_repository_info(self, repository_url: str,
                           branch: Optional[str] = None,
                           commit: Optional[str] = None) -> 'CodeGenerator':
@@ -706,6 +740,7 @@ class CodeGenerator(SchemaOrgBase):
             self.set_identifier(commit, "git-commit")
         return self
 
+    @deprecated("2.0.0")
     def set_runtime_info(self, runtime_platform: Union[str, List[str]],
                         target_product: Optional[str] = None) -> 'CodeGenerator':
         """
@@ -725,6 +760,7 @@ class CodeGenerator(SchemaOrgBase):
             self.set_property("targetProduct", target_product, PropertyType.TEXT)
         return self
 
+    @deprecated("2.0.0")
     def add_dependency(self, name: str, version: Optional[str] = None) -> 'CodeGenerator':
         """
         Add a code dependency.
@@ -771,6 +807,7 @@ class DatasetGenerator(SchemaOrgBase):
         """Recommended properties for datasets."""
         return list(DATASET_RECOMMENDED_PROPERTIES)
 
+    @deprecated("2.0.0")
     def set_basic_info(self, name: str, description: str,
                       url: Optional[str] = None) -> 'DatasetGenerator':
         """
@@ -790,6 +827,7 @@ class DatasetGenerator(SchemaOrgBase):
             self.set_property("url", url, PropertyType.URL)
         return self
 
+    @deprecated("2.0.0")
     def add_distribution(self, content_url: str, encoding_format: str,
                         content_size: Optional[int] = None) -> 'DatasetGenerator':
         """
@@ -817,6 +855,7 @@ class DatasetGenerator(SchemaOrgBase):
         self.data["distribution"].append(distribution)
         return self
 
+    @deprecated("2.0.0")
     def set_coverage(self, temporal: Optional[str] = None,
                     spatial: Optional[str] = None) -> 'DatasetGenerator':
         """
@@ -835,6 +874,7 @@ class DatasetGenerator(SchemaOrgBase):
             self.set_property("spatialCoverage", spatial, PropertyType.TEXT)
         return self
 
+    @deprecated("2.0.0")
     def add_variable_measured(self, variable: str,
                             description: Optional[str] = None) -> 'DatasetGenerator':
         """
@@ -886,6 +926,7 @@ class ArchiveGenerator(SchemaOrgBase):
         """Recommended properties for archives."""
         return list(ARCHIVE_RECOMMENDED_PROPERTIES)
 
+    @deprecated("2.0.0")
     def set_basic_info(self, name: str, encoding_format: str,
                       description: Optional[str] = None,
                       content_size: Optional[int] = None) -> 'ArchiveGenerator':
@@ -909,6 +950,7 @@ class ArchiveGenerator(SchemaOrgBase):
             self.set_property("contentSize", f"{content_size}B", PropertyType.TEXT)
         return self
 
+    @deprecated("2.0.0")
     def add_contained_file(self, file_schema: SchemaOrgBase) -> 'ArchiveGenerator':
         """
         Add a file contained in the archive.
@@ -924,6 +966,7 @@ class ArchiveGenerator(SchemaOrgBase):
         self.data["hasPart"].append(file_schema.to_dict())
         return self
 
+    @deprecated("2.0.0")
     def set_compression_info(self, compression_method: str,
                            compression_ratio: Optional[float] = None) -> 'ArchiveGenerator':
         """
@@ -967,6 +1010,7 @@ class OrganizationGenerator(SchemaOrgBase):
         """Recommended properties for organizations."""
         return list(ORGANIZATION_RECOMMENDED_PROPERTIES)
 
+    @deprecated("2.0.0")
     def set_basic_info(self, name: str, description: Optional[str] = None,
                       url: Optional[str] = None,
                       logo: Optional[str] = None) -> 'OrganizationGenerator':
@@ -994,6 +1038,7 @@ class OrganizationGenerator(SchemaOrgBase):
             }
         return self
 
+    @deprecated("2.0.0")
     def set_legal_info(self, legal_name: Optional[str] = None,
                       tax_id: Optional[str] = None,
                       vat_id: Optional[str] = None,
@@ -1024,6 +1069,7 @@ class OrganizationGenerator(SchemaOrgBase):
             self.set_property("duns", duns, PropertyType.TEXT)
         return self
 
+    @deprecated("2.0.0")
     def set_contact_info(self, email: Optional[str] = None,
                         telephone: Optional[str] = None,
                         fax: Optional[str] = None) -> 'OrganizationGenerator':
@@ -1046,6 +1092,7 @@ class OrganizationGenerator(SchemaOrgBase):
             self.set_property("faxNumber", fax, PropertyType.TEXT)
         return self
 
+    @deprecated("2.0.0")
     def set_address(self, street: Optional[str] = None,
                    city: Optional[str] = None,
                    region: Optional[str] = None,
@@ -1080,6 +1127,7 @@ class OrganizationGenerator(SchemaOrgBase):
             self.data["address"] = address
         return self
 
+    @deprecated("2.0.0")
     def set_founding_info(self, founding_date: Optional[str] = None,
                          dissolution_date: Optional[str] = None,
                          founding_location: Optional[str] = None) -> 'OrganizationGenerator':
@@ -1105,6 +1153,7 @@ class OrganizationGenerator(SchemaOrgBase):
             }
         return self
 
+    @deprecated("2.0.0")
     def add_founder(self, name: str, person_id: Optional[str] = None) -> 'OrganizationGenerator':
         """
         Add a founder.
@@ -1129,6 +1178,7 @@ class OrganizationGenerator(SchemaOrgBase):
         self.data["founder"].append(founder)
         return self
 
+    @deprecated("2.0.0")
     def set_employee_count(self, count: int) -> 'OrganizationGenerator':
         """
         Set number of employees.
@@ -1145,6 +1195,7 @@ class OrganizationGenerator(SchemaOrgBase):
         }
         return self
 
+    @deprecated("2.0.0")
     def set_area_served(self, areas: Union[str, List[str]]) -> 'OrganizationGenerator':
         """
         Set geographic areas served.
@@ -1163,6 +1214,7 @@ class OrganizationGenerator(SchemaOrgBase):
             ]
         return self
 
+    @deprecated("2.0.0")
     def add_contact_point(self, contact_type: str,
                          telephone: Optional[str] = None,
                          email: Optional[str] = None,
@@ -1199,6 +1251,7 @@ class OrganizationGenerator(SchemaOrgBase):
         self.data["contactPoint"].append(contact)
         return self
 
+    @deprecated("2.0.0")
     def add_same_as(self, urls: Union[str, List[str]]) -> 'OrganizationGenerator':
         """
         Add sameAs links (social profiles, Wikipedia, etc.).
@@ -1218,6 +1271,7 @@ class OrganizationGenerator(SchemaOrgBase):
         self.data["sameAs"].extend(urls)
         return self
 
+    @deprecated("2.0.0")
     def set_parent_organization(self, name: str,
                                org_id: Optional[str] = None) -> 'OrganizationGenerator':
         """
@@ -1240,6 +1294,7 @@ class OrganizationGenerator(SchemaOrgBase):
         self.data["parentOrganization"] = parent
         return self
 
+    @deprecated("2.0.0")
     def add_department(self, name: str, dept_id: Optional[str] = None) -> 'OrganizationGenerator':
         """
         Add a department/sub-organization.
@@ -1289,6 +1344,7 @@ class PersonGenerator(SchemaOrgBase):
         """Recommended properties for people."""
         return list(PERSON_RECOMMENDED_PROPERTIES)
 
+    @deprecated("2.0.0")
     def set_name(self, name: Optional[str] = None,
                 given_name: Optional[str] = None,
                 family_name: Optional[str] = None,
@@ -1323,6 +1379,7 @@ class PersonGenerator(SchemaOrgBase):
             self.set_property("honorificSuffix", honorific_suffix, PropertyType.TEXT)
         return self
 
+    @deprecated("2.0.0")
     def set_contact_info(self, email: Optional[str] = None,
                         telephone: Optional[str] = None,
                         fax: Optional[str] = None) -> 'PersonGenerator':
@@ -1345,6 +1402,7 @@ class PersonGenerator(SchemaOrgBase):
             self.set_property("faxNumber", fax, PropertyType.TEXT)
         return self
 
+    @deprecated("2.0.0")
     def set_address(self, street: Optional[str] = None,
                    city: Optional[str] = None,
                    region: Optional[str] = None,
@@ -1379,6 +1437,7 @@ class PersonGenerator(SchemaOrgBase):
             self.data["address"] = address
         return self
 
+    @deprecated("2.0.0")
     def set_birth_info(self, birth_date: Optional[str] = None,
                       birth_place: Optional[str] = None) -> 'PersonGenerator':
         """
@@ -1400,6 +1459,7 @@ class PersonGenerator(SchemaOrgBase):
             }
         return self
 
+    @deprecated("2.0.0")
     def set_death_info(self, death_date: Optional[str] = None,
                       death_place: Optional[str] = None) -> 'PersonGenerator':
         """
@@ -1421,6 +1481,7 @@ class PersonGenerator(SchemaOrgBase):
             }
         return self
 
+    @deprecated("2.0.0")
     def set_job_info(self, job_title: Optional[str] = None,
                     works_for: Optional[str] = None,
                     works_for_id: Optional[str] = None) -> 'PersonGenerator':
@@ -1447,6 +1508,7 @@ class PersonGenerator(SchemaOrgBase):
             self.data["worksFor"] = org
         return self
 
+    @deprecated("2.0.0")
     def add_affiliation(self, name: str, org_id: Optional[str] = None) -> 'PersonGenerator':
         """
         Add an organizational affiliation.
@@ -1471,6 +1533,7 @@ class PersonGenerator(SchemaOrgBase):
         self.data["affiliation"].append(org)
         return self
 
+    @deprecated("2.0.0")
     def add_alumni_of(self, name: str, org_id: Optional[str] = None) -> 'PersonGenerator':
         """
         Add an educational institution as alma mater.
@@ -1495,6 +1558,7 @@ class PersonGenerator(SchemaOrgBase):
         self.data["alumniOf"].append(org)
         return self
 
+    @deprecated("2.0.0")
     def set_nationality(self, country: str) -> 'PersonGenerator':
         """
         Set nationality.
@@ -1511,6 +1575,7 @@ class PersonGenerator(SchemaOrgBase):
         }
         return self
 
+    @deprecated("2.0.0")
     def set_gender(self, gender: str) -> 'PersonGenerator':
         """
         Set gender.
@@ -1524,6 +1589,7 @@ class PersonGenerator(SchemaOrgBase):
         self.set_property("gender", gender, PropertyType.TEXT)
         return self
 
+    @deprecated("2.0.0")
     def set_image(self, image_url: str) -> 'PersonGenerator':
         """
         Set profile image.
@@ -1540,6 +1606,7 @@ class PersonGenerator(SchemaOrgBase):
         }
         return self
 
+    @deprecated("2.0.0")
     def set_url(self, url: str) -> 'PersonGenerator':
         """
         Set personal website URL.
@@ -1553,6 +1620,7 @@ class PersonGenerator(SchemaOrgBase):
         self.set_property("url", url, PropertyType.URL)
         return self
 
+    @deprecated("2.0.0")
     def add_same_as(self, urls: Union[str, List[str]]) -> 'PersonGenerator':
         """
         Add sameAs links (social profiles, Wikipedia, etc.).
@@ -1572,6 +1640,7 @@ class PersonGenerator(SchemaOrgBase):
         self.data["sameAs"].extend(urls)
         return self
 
+    @deprecated("2.0.0")
     def add_knows(self, name: str, person_id: Optional[str] = None) -> 'PersonGenerator':
         """
         Add a person this person knows.
@@ -1596,6 +1665,7 @@ class PersonGenerator(SchemaOrgBase):
         self.data["knows"].append(person)
         return self
 
+    @deprecated("2.0.0")
     def add_colleague(self, name: str, person_id: Optional[str] = None) -> 'PersonGenerator':
         """
         Add a colleague.
@@ -1620,6 +1690,7 @@ class PersonGenerator(SchemaOrgBase):
         self.data["colleague"].append(person)
         return self
 
+    @deprecated("2.0.0")
     def set_spouse(self, name: str, person_id: Optional[str] = None) -> 'PersonGenerator':
         """
         Set spouse.
@@ -1641,6 +1712,7 @@ class PersonGenerator(SchemaOrgBase):
         self.data["spouse"] = spouse
         return self
 
+    @deprecated("2.0.0")
     def add_parent(self, name: str, person_id: Optional[str] = None) -> 'PersonGenerator':
         """
         Add a parent.
@@ -1665,6 +1737,7 @@ class PersonGenerator(SchemaOrgBase):
         self.data["parent"].append(person)
         return self
 
+    @deprecated("2.0.0")
     def add_child(self, name: str, person_id: Optional[str] = None) -> 'PersonGenerator':
         """
         Add a child.
@@ -1689,6 +1762,7 @@ class PersonGenerator(SchemaOrgBase):
         self.data["children"].append(person)
         return self
 
+    @deprecated("2.0.0")
     def add_sibling(self, name: str, person_id: Optional[str] = None) -> 'PersonGenerator':
         """
         Add a sibling.
