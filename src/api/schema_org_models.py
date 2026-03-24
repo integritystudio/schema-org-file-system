@@ -155,7 +155,7 @@ class CompanySchemaOrg(BaseModel):
   name: str
   url: Optional[HttpUrl] = None
   knows_about: Optional[str] = Field(None, alias="knowsAbout")
-  date_founded: Optional[datetime] = Field(None, alias="dateFounded")
+  date_founded: Optional[str] = Field(None, alias="dateFounded")
   date_created: Optional[datetime] = Field(None, alias="dateCreated")
   date_modified: Optional[datetime] = Field(None, alias="dateModified")
   same_as: Optional[List[str]] = Field(None, alias="sameAs")

@@ -100,7 +100,7 @@ class ImageMetadata(BaseModel):
   """Image-specific metadata."""
   width: Optional[int] = None
   height: Optional[int] = None
-  has_faces: Optional[bool] = Field(None, alias="ml:hasFaces")
+  has_faces: Optional[bool] = Field(None, alias="hasFaces")
   content_location: Optional[Dict[str, Any]] = Field(None, alias="contentLocation")
 
   class Config:
@@ -179,50 +179,3 @@ class CountryMapping(BaseModel):
   normalized_code: str = Field(description="Normalized ISO 3166-1 alpha-2 code")
 
 
-# ============================================================================
-# Builder Result Envelopes
-# ============================================================================
-
-class BuilderResult(BaseModel):
-  """Generic builder function result envelope."""
-  success: bool
-  result: Optional[Dict[str, Any]] = None
-  error: Optional[str] = None
-
-
-class EntityReferenceResult(BaseModel):
-  """Builder result for entity references."""
-  success: bool
-  entity_reference: Optional[EntityReferenceBase] = None
-  error: Optional[str] = None
-
-
-class AddressResult(BaseModel):
-  """Builder result for address objects."""
-  success: bool
-  address: Optional[PostalAddress] = None
-  error: Optional[str] = None
-
-
-class CoordinatesResult(BaseModel):
-  """Builder result for coordinates."""
-  success: bool
-  coordinates: Optional[GeoCoordinates] = None
-  error: Optional[str] = None
-
-
-# ============================================================================
-# Batch Operation Types
-# ============================================================================
-
-class BatchEntityReference(BaseModel):
-  """Batch operation on entity references."""
-  entity_id: str
-  reference: EntityReferenceBase
-
-
-class BatchAddressConversion(BaseModel):
-  """Batch address conversion operation."""
-  input: Dict[str, Optional[str]]
-  result: Optional[PostalAddress] = None
-  error: Optional[str] = None
