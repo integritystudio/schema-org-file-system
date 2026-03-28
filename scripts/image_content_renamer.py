@@ -21,6 +21,10 @@ from shared.constants import IMAGE_EXTENSIONS_WIDE
 from shared.file_ops import resolve_collision
 
 
+_EXIF_TAG_DATETIME_ORIGINAL = 36867  # DateTimeOriginal
+_EXIF_TAG_DATETIME = 306             # DateTime
+
+
 class ImageContentRenamer:
     """Rename images based on visual content analysis."""
 
@@ -149,8 +153,7 @@ class ImageContentRenamer:
             with Image.open(image_path) as image:
                 exif = image._getexif()
             if exif:
-                # DateTimeOriginal (36867) or DateTime (306)
-                for tag_id in [36867, 306]:
+                for tag_id in [_EXIF_TAG_DATETIME_ORIGINAL, _EXIF_TAG_DATETIME]:
                     if tag_id in exif:
                         date_str = exif[tag_id]
                         dt = datetime.strptime(date_str, "%Y:%m:%d %H:%M:%S")
