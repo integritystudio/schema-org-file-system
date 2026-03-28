@@ -61,6 +61,7 @@ tqdm>=4.67.0                      # Progress bars
 PyYAML>=6.0.0                     # YAML parsing
 numpy>=2.2.0                      # Numerical operations
 scikit-learn>=1.5.0               # ML utilities (train/test split, vectorizers, encoders)
+joblib>=1.3.0                     # Disk caching for CLIP embeddings (clip_cache.py)
 
 # =============================================================================
 # DEVELOPMENT DEPENDENCIES (Optional)
