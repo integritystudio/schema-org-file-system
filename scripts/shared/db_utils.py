@@ -35,9 +35,14 @@ def db_connection(
 ) -> Generator[sqlite3.Connection, None, None]:
   """Context manager that opens and closes a SQLite connection.
 
+  Does NOT auto-commit. After write operations, callers must either:
+    - call ``conn.commit()`` explicitly, or
+    - wrap the writes with ``with conn:`` (uses SQLite's implicit transaction).
+
   Usage:
     with db_connection() as conn:
         conn.execute(...)
+        conn.commit()
   """
   conn = get_db_connection(db_path, row_factory)
   try:
