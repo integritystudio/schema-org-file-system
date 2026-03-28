@@ -12,8 +12,7 @@ pillow_heif>=1.1.1                # HEIC/HEIF image support (iPhone photos)
 piexif>=1.1.3                     # EXIF metadata read/write
 
 # OCR text extraction
-pytesseract>=0.3.13               # Python wrapper for Tesseract OCR
-# Note: Also requires system install: brew install tesseract
+easyocr>=1.7.0                    # GPU-accelerated OCR, better accuracy on screenshots/mobile
 
 # Geolocation
 geopy>=2.4.1                      # Geocoding (GPS coords to location names)
@@ -80,11 +79,9 @@ numpy>=2.2.0                      # Numerical operations
 # =============================================================================
 #
 # macOS:
-#   brew install tesseract         # OCR engine
 #   brew install poppler           # PDF rendering (for pdf2image)
 #
 # Linux:
-#   sudo apt-get install tesseract-ocr
 #   sudo apt-get install poppler-utils
 #
 # =============================================================================
