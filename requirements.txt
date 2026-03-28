@@ -25,6 +25,7 @@ SQLAlchemy>=2.0.0                 # ORM for graph-based file storage
 # =============================================================================
 
 # Deep learning framework
+sentence-transformers>=3.0.0      # CLIP inference with built-in batching (replaces bare transformers)
 torch>=2.9.0                      # PyTorch ML framework
 torchvision>=0.24.0               # Computer vision utilities
 
