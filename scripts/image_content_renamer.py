@@ -4,12 +4,12 @@ Image Content Renamer - Rename images based on visual content analysis.
 
 Uses CLIP vision model to analyze image content and generate descriptive filenames.
 """
+from __future__ import annotations
 
 import argparse
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List, Tuple
 
 try:
     from PIL import Image
@@ -84,7 +84,7 @@ class ImageContentRenamer:
         if CLIP_AVAILABLE:
             self.classifier = CLIPClassifier()
 
-    def analyze_image(self, image_path: Path) -> Optional[Tuple[str, float]]:
+    def analyze_image(self, image_path: Path) -> tuple[str, float] | None:
         """
         Analyze image content using CLIP.
 
@@ -112,7 +112,7 @@ class ImageContentRenamer:
             print(f"  Error analyzing image: {e}")
             return None
 
-    def _refine_category(self, image_path: Path, category: str) -> Optional[Tuple[str, float]]:
+    def _refine_category(self, image_path: Path, category: str) -> tuple[str, float] | None:
         """Refine the category with more specific terms."""
         refinements = self.REFINEMENT_TERMS.get(category, [])
         if not refinements:
@@ -143,11 +143,11 @@ class ImageContentRenamer:
 
         return new_name
 
-    def _get_date_string(self, image_path: Path) -> Optional[str]:
+    def _get_date_string(self, image_path: Path) -> str | None:
         """Extract date from image EXIF or file modification time."""
         try:
-            image = Image.open(image_path)
-            exif = image._getexif()
+            with Image.open(image_path) as image:
+                exif = image._getexif()
             if exif:
                 # DateTimeOriginal (36867) or DateTime (306)
                 for tag_id in [36867, 306]:
