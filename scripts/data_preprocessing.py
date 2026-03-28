@@ -12,6 +12,7 @@ ML models on file categorization:
 5. Feature engineering for pattern learning
 """
 
+import logging
 import os
 import re
 import json
@@ -19,8 +20,10 @@ import hashlib
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple, Any
-from collections import Counter, defaultdict
+from collections import Counter
 import unicodedata
+
+logger = logging.getLogger(__name__)
 
 from shared.constants import SCREENSHOT_PATTERNS, DOCUMENT_PATTERNS
 
@@ -274,102 +277,69 @@ class DataPreprocessor:
     def create_train_test_split(
         self,
         test_ratio: float = 0.2,
-        stratify_by: str = 'category',
-        random_seed: int = 42
+        stratify_by: str = "category",
+        random_seed: int = 42,
     ) -> Tuple[List[Dict], List[Dict]]:
-        """Create stratified train/test split.
-
-        Args:
-            test_ratio: Fraction of data for testing
-            stratify_by: Field to stratify by ('category' or 'subcategory')
-            random_seed: Random seed for reproducibility
-
-        Returns:
-            Tuple of (train_features, test_features)
-        """
-        import random
-        random.seed(random_seed)
+        """Split features into train/test with stratification."""
+        from sklearn.model_selection import train_test_split as sklearn_split
 
         if not self.features:
-            raise ValueError("No features extracted. Call extract_all_features() first.")
+            return [], []
 
-        # Group by stratification field
-        groups = defaultdict(list)
-        for f in self.features:
-            key = f.get(stratify_by, 'unknown')
-            groups[key].append(f)
+        stratify_labels = [f.get(stratify_by, "unknown") for f in self.features]
+        # sklearn requires at least 2 samples per class for stratification
+        label_counts = Counter(stratify_labels)
+        valid = [lbl for lbl, cnt in label_counts.items() if cnt >= 2]
+        if len(valid) < len(label_counts):
+            logger.warning(
+                "Dropping %d classes with <2 samples from stratification",
+                len(label_counts) - len(valid),
+            )
+            mask = [lbl in valid for lbl in stratify_labels]
+            features = [f for f, ok in zip(self.features, mask) if ok]
+            stratify_labels = [lbl for lbl, ok in zip(stratify_labels, mask) if ok]
+        else:
+            features = self.features
 
-        train_data = []
-        test_data = []
+        if len(features) < 2:
+            return features, []
 
-        for key, items in groups.items():
-            random.shuffle(items)
-            split_idx = int(len(items) * (1 - test_ratio))
-            train_data.extend(items[:split_idx])
-            test_data.extend(items[split_idx:])
-
-        # Shuffle final results
-        random.shuffle(train_data)
-        random.shuffle(test_data)
-
-        self.statistics['train_test_split'] = {
-            'train_size': len(train_data),
-            'test_size': len(test_data),
-            'test_ratio': round(len(test_data) / len(self.features), 3),
-            'stratify_by': stratify_by,
-        }
-
-        return train_data, test_data
+        train, test = sklearn_split(
+            features,
+            test_size=test_ratio,
+            stratify=stratify_labels,
+            random_state=random_seed,
+        )
+        return train, test
 
     def get_vocabulary(self, min_freq: int = 5) -> Dict[str, int]:
-        """Build vocabulary from filename tokens.
+        """Build vocabulary from filename tokens with minimum frequency threshold."""
+        from sklearn.feature_extraction.text import CountVectorizer
 
-        Args:
-            min_freq: Minimum frequency for a token to be included
-
-        Returns:
-            Dictionary mapping tokens to indices
-        """
         if not self.features:
-            raise ValueError("No features extracted. Call extract_all_features() first.")
+            return {}
 
-        token_counts = Counter()
-        for f in self.features:
-            token_counts.update(f['filename_tokens'])
+        docs = [" ".join(f.get("filename_tokens", [])) for f in self.features]
+        docs = [d for d in docs if d.strip()]
+        if not docs:
+            return {}
 
-        # Filter by frequency and create vocabulary
-        vocab = {'<PAD>': 0, '<UNK>': 1}
-        idx = 2
-        for token, count in token_counts.most_common():
-            if count >= min_freq:
-                vocab[token] = idx
-                idx += 1
-
-        self.statistics['vocabulary'] = {
-            'size': len(vocab),
-            'min_freq': min_freq,
-        }
-
-        return vocab
+        vectorizer = CountVectorizer(min_df=min_freq, token_pattern=r"(?u)\b\w+\b")
+        vectorizer.fit(docs)
+        return {token: idx for idx, token in enumerate(vectorizer.get_feature_names_out())}
 
     def get_label_encoder(self) -> Tuple[Dict[str, int], Dict[int, str]]:
-        """Create label encoders for categories.
+        """Create label encoder for category classification."""
+        from sklearn.preprocessing import LabelEncoder
 
-        Returns:
-            Tuple of (label_to_id, id_to_label)
-        """
-        if not self.features:
-            raise ValueError("No features extracted. Call extract_all_features() first.")
+        categories = sorted({f.get("category", "uncategorized") for f in self.features})
+        if not categories:
+            return {}, {}
 
-        categories = sorted(set(f['category'] for f in self.features))
-        label_to_id = {cat: i for i, cat in enumerate(categories)}
-        id_to_label = {i: cat for i, cat in enumerate(categories)}
-
-        self.statistics['label_encoding'] = {
-            'num_classes': len(categories),
-            'classes': categories,
-        }
-
+        le = LabelEncoder()
+        le.fit(categories)
+        label_to_id = {cls: int(le.transform([cls])[0]) for cls in le.classes_}
+        id_to_label = {v: k for k, v in label_to_id.items()}
         return label_to_id, id_to_label
 
     def validate_data_quality(self) -> Dict[str, Any]:
