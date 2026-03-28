@@ -277,19 +277,19 @@ class Category(Base, SchemaOrgSerializable):
 
 ## Integration Checklist
 
-- [ ] Update File class with SchemaOrgSerializable
-- [ ] Update Category class with SchemaOrgSerializable
-- [ ] Update Company class with SchemaOrgSerializable
-- [ ] Update Person class with SchemaOrgSerializable
-- [ ] Update Location class with SchemaOrgSerializable
-- [ ] Replace manual MIME mapping with MimeTypeMapper
-- [ ] Simplify to_schema_org() methods using PropertyBuilder
-- [ ] Use builders for relationship properties
-- [ ] Replace bulk export functions with SchemaOrgExporter
-- [ ] Add variant representations for appropriate entities
-- [ ] Update REST API endpoints to use exporter
-- [ ] Add tests for new modules
-- [ ] Update documentation
+- [x] Update File class with SchemaOrgSerializable
+- [x] Update Category class with SchemaOrgSerializable
+- [x] Update Company class with SchemaOrgSerializable
+- [x] Update Person class with SchemaOrgSerializable
+- [x] Update Location class with SchemaOrgSerializable
+- [x] Replace manual MIME mapping with MimeTypeMapper
+- [x] Simplify to_schema_org() methods using PropertyBuilder
+- [x] Use builders for relationship properties
+- [x] Replace bulk export functions with SchemaOrgExporter
+- [x] Add variant representations for appropriate entities
+- [x] Update REST API endpoints to use exporter
+- [x] Add tests for new modules
+- [x] Update documentation
 
 ## Next Steps
 

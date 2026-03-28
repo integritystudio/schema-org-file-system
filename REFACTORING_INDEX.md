@@ -184,34 +184,31 @@ file_as_media = FileVariants.to_media_object(
 
 **Status:** Complete. All modules created, compiled, and importable.
 
-### Phase 2: Model Migration ⏳
-- [ ] Update File model
-- [ ] Update Category model
-- [ ] Update Company model
-- [ ] Update Person model
-- [ ] Update Location model
+### Phase 2: Model Migration ✅
+- [x] Update File model
+- [x] Update Category model
+- [x] Update Company model
+- [x] Update Person model
+- [x] Update Location model
 
-**Estimated:** 1-2 days
-**Impact:** Models become simpler, inherit from SchemaOrgSerializable
+**Completed:** c2ad740 — `feat(schema-org): implement to_schema_org() for all entity models with REST API`
 
 ### Phase 3: Testing ⏳
-- [ ] Unit tests for mime_mapping
-- [ ] Unit tests for builders
+- [x] Unit tests for mime_mapping
+- [x] Unit tests for builders
 - [ ] Unit tests for exporter
 - [ ] Integration tests for variants
 - [ ] End-to-end export tests
 
-**Estimated:** 2-3 days
-**Impact:** Ensure correctness and catch edge cases
+**Partial:** 16 test methods in `src/tests/test_schema_org_serialization.py` (c2ad740) cover MIME mapping and builder logic; dedicated exporter/variant/e2e tests not yet written.
 
-### Phase 4: Integration ⏳
-- [ ] Update REST API endpoints
-- [ ] Add JSON-LD validation
+### Phase 4: Integration ✅
+- [x] Update REST API endpoints
+- [x] Add JSON-LD validation
 - [ ] Performance testing
-- [ ] Update documentation
+- [x] Update documentation
 
-**Estimated:** 1 day
-**Impact:** Production-ready, fully integrated
+**Completed:** c2ad740 (15 FastAPI endpoints), e989a88 (Pydantic response_model + validation), 8b64fcf (docs). Performance testing not done.
 
 ---
 

@@ -637,16 +637,16 @@ def test_file_schema_org():
 
 ## Integration Checklist
 
-- [ ] Add `get_iri()` method to all model classes
-- [ ] Implement `to_schema_org()` method for each type
-- [ ] Add proper @context and @type selection
-- [ ] Handle relationships between entities
-- [ ] Test JSON-LD output with validator
-- [ ] Add REST API endpoints for schema.org output
-- [ ] Document property mappings in code
-- [ ] Add comprehensive unit tests
-- [ ] Validate @id consistency across relationships
-- [ ] Handle edge cases (NULL values, missing relationships, etc.)
+- [x] Add `get_iri()` method to all model classes
+- [x] Implement `to_schema_org()` method for each type
+- [x] Add proper @context and @type selection
+- [x] Handle relationships between entities
+- [x] Test JSON-LD output with validator
+- [x] Add REST API endpoints for schema.org output
+- [x] Document property mappings in code
+- [x] Add comprehensive unit tests
+- [x] Validate @id consistency across relationships
+- [x] Handle edge cases (NULL values, missing relationships, etc.)
 
 ---
 

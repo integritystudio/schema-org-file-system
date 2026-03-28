@@ -549,24 +549,24 @@ def to_schema_org(self) -> Dict[str, Any]:
 
 ### In `src/storage/models.py`:
 
-- [ ] Add `to_schema_org()` method to each model class
-- [ ] Implement proper `@id` (IRI) generation using canonical IDs
-- [ ] Add property mapping for all schema.org fields
-- [ ] Handle relationships between entities
-- [ ] Add custom properties for non-standard fields
-- [ ] Ensure datetime serialization to ISO 8601 format
+- [x] Add `to_schema_org()` method to each model class
+- [x] Implement proper `@id` (IRI) generation using canonical IDs
+- [x] Add property mapping for all schema.org fields
+- [x] Handle relationships between entities
+- [x] Add custom properties for non-standard fields
+- [x] Ensure datetime serialization to ISO 8601 format
 
 ### In `src/base.py` (SchemaOrgBase):
 
-- [ ] Extend helper methods to support all 5 entity types
-- [ ] Add type-specific validation
-- [ ] Implement relationship building methods
-- [ ] Add nested object support for Address, GeoCoordinates, etc.
+- [x] Extend helper methods to support all 5 entity types
+- [x] Add type-specific validation
+- [x] Implement relationship building methods
+- [x] Add nested object support for Address, GeoCoordinates, etc.
 
 ### Integration Points:
 
-- [ ] REST API endpoints return proper schema.org JSON-LD
-- [ ] Database models serialize to schema.org format
+- [x] REST API endpoints return proper schema.org JSON-LD
+- [x] Database models serialize to schema.org format
 - [ ] Search endpoints include schema.org context
 - [ ] Performance impact analysis includes schema.org metrics
 
