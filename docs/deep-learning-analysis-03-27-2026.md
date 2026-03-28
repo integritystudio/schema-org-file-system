@@ -56,8 +56,8 @@
 
 | Priority | Task | Effort | Status |
 |----------|------|--------|--------|
-| 1 | Add `pip-compile` lock file | 1–2 hrs | Done |
-| 2 | CLIP singleton/module-level cache | 2–4 hrs | Done |
+| 1 | Add `pip-compile` lock file | 1–2 hrs | Done (`cedfe06`) |
+| 2 | CLIP singleton/module-level cache | 2–4 hrs | Done (`8975f3e`) |
 | 3 | Batch CLIP inference (8–32 images) | 6–8 hrs | Open |
 | 4 | `joinedload` on graph queries | 2–3 hrs | Open |
 | 5 | Split `file_organizer_content_based.py` per refactor plan | 1–2 days | Open |
