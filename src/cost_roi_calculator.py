@@ -6,6 +6,7 @@ Calculates per-feature and per-model costs with ROI metrics.
 Tracks usage, estimates costs, and provides optimization recommendations.
 """
 
+from __future__ import annotations
 import json
 import time
 from dataclasses import dataclass, field, asdict
@@ -13,6 +14,8 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Any
+
+import pandas as pd
 
 
 class CostType(Enum):
@@ -271,6 +274,22 @@ class CostROICalculator:
                 manual_time_saved_sec=config_dict.get('manual_time_saved_sec', 0.0)
             )
 
+    def _records_df(self) -> pd.DataFrame:
+        """Return usage_records as a DataFrame for vectorized aggregation."""
+        if not self.usage_records:
+            return pd.DataFrame(columns=[
+                "feature_name", "processing_time_sec", "files_processed", "success"
+            ])
+        return pd.DataFrame([
+            {
+                "feature_name": r.feature_name,
+                "processing_time_sec": r.processing_time_sec,
+                "files_processed": r.files_processed,
+                "success": r.success,
+            }
+            for r in self.usage_records
+        ])
+
     def record_usage(
         self,
         feature_name: str,
@@ -323,10 +342,10 @@ class CostROICalculator:
         if not config:
             raise ValueError(f"Unknown feature: {feature_name}")
 
-        # Filter records for this feature
-        records = [r for r in self.usage_records if r.feature_name == feature_name]
+        subset = self._records_df()
+        subset = subset[subset["feature_name"] == feature_name]
 
-        if not records:
+        if subset.empty:
             return CostSummary(
                 feature_name=feature_name,
                 total_invocations=0,
@@ -337,22 +356,12 @@ class CostROICalculator:
                 total_files_processed=0
             )
 
-        total_invocations = len(records)
-        total_processing_time = sum(r.processing_time_sec for r in records)
-        total_files = sum(r.files_processed for r in records)
-        successful = sum(1 for r in records if r.success)
-
-        # Calculate cost based on cost type
-        if config.cost_type == CostType.COMPUTE:
-            # Cost based on invocations
-            total_cost = total_invocations * config.cost_per_unit
-        elif config.cost_type == CostType.API_CALL:
-            total_cost = total_invocations * config.cost_per_unit
-        else:
-            total_cost = total_invocations * config.cost_per_unit
-
+        total_invocations = len(subset)
+        total_processing_time = float(subset["processing_time_sec"].sum())
+        total_files = int(subset["files_processed"].sum())
+        success_rate = float(subset["success"].mean())
+        total_cost = total_invocations * config.cost_per_unit
         avg_cost_per_file = total_cost / total_files if total_files > 0 else 0.0
-        success_rate = successful / total_invocations if total_invocations > 0 else 0.0
 
         return CostSummary(
             feature_name=feature_name,
@@ -440,18 +449,49 @@ class CostROICalculator:
         Returns:
             Dictionary with total cost breakdown
         """
+        df = self._records_df()
+        if df.empty:
+            return {
+                'total_cost': 0.0,
+                'total_files_processed': 0,
+                'total_processing_time_sec': 0.0,
+                'avg_cost_per_file': 0.0,
+                'feature_breakdown': {}
+            }
+
+        grouped = df.groupby("feature_name").agg(
+            total_invocations=("success", "count"),
+            total_processing_time_sec=("processing_time_sec", "sum"),
+            total_files_processed=("files_processed", "sum"),
+            success_rate=("success", "mean"),
+        )
+
+        feature_costs: Dict[str, Any] = {}
         total_cost = 0.0
         total_files = 0
         total_time = 0.0
-        feature_costs = {}
 
-        for feature_name in self.cost_configs.keys():
-            summary = self.calculate_feature_cost(feature_name)
-            if summary.total_invocations > 0:
-                feature_costs[feature_name] = asdict(summary)
-                total_cost += summary.total_cost
-                total_files += summary.total_files_processed
-                total_time += summary.total_processing_time_sec
+        for feature_name, row in grouped.iterrows():
+            config = self.cost_configs.get(feature_name)
+            if not config:
+                continue
+            invocations = int(row["total_invocations"])
+            files = int(row["total_files_processed"])
+            proc_time = float(row["total_processing_time_sec"])
+            feat_cost = invocations * config.cost_per_unit
+            summary = CostSummary(
+                feature_name=feature_name,
+                total_invocations=invocations,
+                total_processing_time_sec=proc_time,
+                total_cost=feat_cost,
+                avg_cost_per_file=feat_cost / files if files > 0 else 0.0,
+                success_rate=float(row["success_rate"]),
+                total_files_processed=files,
+            )
+            feature_costs[feature_name] = asdict(summary)
+            total_cost += feat_cost
+            total_files += files
+            total_time += proc_time
 
         return {
             'total_cost': total_cost,
@@ -468,12 +508,15 @@ class CostROICalculator:
         Returns:
             Dictionary with total ROI breakdown
         """
+        df = self._records_df()
+        feature_names = list(self.cost_configs.keys()) if df.empty else list(df["feature_name"].unique())
+
+        feature_rois: Dict[str, Any] = {}
         total_cost = 0.0
         total_value = 0.0
         total_hours_saved = 0.0
-        feature_rois = {}
 
-        for feature_name in self.cost_configs.keys():
+        for feature_name in feature_names:
             roi = self.calculate_roi(feature_name)
             if roi.total_cost > 0 or roi.total_value > 0:
                 feature_rois[feature_name] = asdict(roi)
