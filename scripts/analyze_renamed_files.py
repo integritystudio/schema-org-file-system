@@ -3,16 +3,16 @@
 Analyze renamed image files to generate descriptions using OCR and CLIP.
 Identifies files that match the renaming pattern and provides content descriptions.
 """
+from __future__ import annotations
 
-import os
-import sys
-import re
-import json
 import csv
-from pathlib import Path
-from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+import json
+import os
+import re
+import sys
 from collections import defaultdict
+from datetime import datetime
+from pathlib import Path
 
 from shared.clip_utils import CLIPClassifier, CLIP_AVAILABLE
 from shared.ocr_utils import extract_ocr_text, is_ocr_available
@@ -51,7 +51,7 @@ class RenamedFileAnalyzer:
                 return True
         return False
 
-    def classify_with_clip(self, image_path: Path) -> Optional[Dict[str, float]]:
+    def classify_with_clip(self, image_path: Path) -> dict[str, float] | None:
         """Classify image content using CLIP."""
         if not self.vision_available or self.classifier is None:
             return None
@@ -70,7 +70,7 @@ class RenamedFileAnalyzer:
         except Exception:
             return None
 
-    def get_top_classifications(self, classifications: Dict[str, float], top_n: int = 3, threshold: float = 0.1) -> List[Tuple[str, float]]:
+    def get_top_classifications(self, classifications: dict[str, float], top_n: int = 3, threshold: float = 0.1) -> list[tuple[str, float]]:
         """Get top classifications above threshold."""
         if not classifications:
             return []
@@ -121,7 +121,7 @@ class RenamedFileAnalyzer:
 
         return result
 
-    def find_renamed_files(self, source_dir: str, recursive: bool = True) -> List[Path]:
+    def find_renamed_files(self, source_dir: str, recursive: bool = True) -> list[Path]:
         """Find all files matching renamed patterns."""
         source_path = Path(source_dir).expanduser()
         renamed_files = []
