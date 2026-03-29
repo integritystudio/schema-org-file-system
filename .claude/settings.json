@@ -4,5 +4,18 @@
     "atomic-agents@claude-plugins-official": true,
     "wondelai-drive-motivation@claude-code-plugins-plus": true,
     "wondelai-influence-psychology@claude-code-plugins-plus": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f \"REFACTORING_GUIDE.md\" ] && ! grep -q \"### S7\" docs/BACKLOG.md 2>/dev/null && ! grep -q \"### S8\" docs/BACKLOG.md 2>/dev/null; then rm REFACTORING_GUIDE.md && echo \"[hook] Deleted REFACTORING_GUIDE.md — S7 and S8 complete\"; fi"
+          }
+        ]
+      }
+    ]
   }
 }
