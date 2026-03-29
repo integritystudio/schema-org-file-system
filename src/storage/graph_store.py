@@ -837,12 +837,13 @@ class GraphStore:
                 .having(func.count(File.id) > 1)\
                 .all()
 
-            result = []
-            for hash_val, _ in duplicates:
-                files = session.query(File).filter(File.content_hash == hash_val).all()
-                result.append(files)
+            duplicate_hashes = [h for h, _ in duplicates]
+            all_files = session.query(File).filter(File.content_hash.in_(duplicate_hashes)).all()
+            groups: defaultdict = defaultdict(list)
+            for f in all_files:
+                groups[f.content_hash].append(f)
 
-            return result
+            return list(groups.values())
 
         finally:
             if close_session:
