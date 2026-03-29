@@ -49,6 +49,16 @@ Current tests assert structural JSON-LD shape but do not validate against the sc
 Integrate an external validator (e.g., `pyshacl` with the schema.org SHACL shapes, or `jsonschema` with a custom schema.org JSON Schema) to confirm emitted properties are recognized schema.org terms and values match expected types.
 Cover at minimum: `File` (ImageObject/VideoObject), `Category` (DefinedTerm), `Company` (Organization), `Person`, `Location` (Place/City/Country).
 
+### S9 — Search endpoints: include schema.org context in responses
+**Source:** `SCHEMA_ORG_ALIGNMENT.md` § Integration Points
+**Files:** `src/api/schema_org_api.py` search/filter endpoints
+Ensure any search or filter endpoints return responses wrapped with `@context` and valid JSON-LD structure, not bare JSON objects.
+
+### S10 — Performance impact analysis for schema.org serialization
+**Source:** `SCHEMA_ORG_ALIGNMENT.md` § Integration Points
+**Files:** `tests/performance/test_export_benchmark.py`
+Extend the existing benchmark suite to measure per-entity `to_schema_org()` serialization cost and relationship-building overhead. Establish baselines at 100/1k/10k entities.
+
 ### S8 — JSON-LD context file generation for complex graphs
 **Source:** `REFACTORING_GUIDE.md` § Next Steps #6
 **Files:** `src/storage/schema_org_exporter.py`, new `src/storage/schema_org_context.py`
