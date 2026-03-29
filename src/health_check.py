@@ -9,7 +9,10 @@ import shutil
 from dataclasses import dataclass
 from typing import Optional
 
-from constants import SEPARATOR_WIDTH_MEDIUM
+try:
+    from .constants import SEPARATOR_WIDTH_MEDIUM
+except ImportError:
+    from constants import SEPARATOR_WIDTH_MEDIUM
 
 
 @dataclass

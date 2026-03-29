@@ -26,7 +26,10 @@ import functools
 from typing import Optional, Dict, Any, Callable, Generator
 from contextlib import contextmanager
 
-from constants import DEFAULT_TRACES_SAMPLE_RATE, DEFAULT_PROFILES_SAMPLE_RATE
+try:
+    from .constants import DEFAULT_TRACES_SAMPLE_RATE, DEFAULT_PROFILES_SAMPLE_RATE
+except ImportError:
+    from constants import DEFAULT_TRACES_SAMPLE_RATE, DEFAULT_PROFILES_SAMPLE_RATE
 
 # Sentry SDK import with graceful degradation
 try:

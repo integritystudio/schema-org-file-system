@@ -21,14 +21,24 @@ from .models import (
 )
 from .graph_store import GraphStore
 from .kv_store import KeyValueStorage
-from constants import (
-    SHA256_HEX_LENGTH,
-    UUID_STRING_LENGTH,
-    SHORT_FIELD_LENGTH,
-    SEPARATOR_WIDTH_SMALL,
-    SEPARATOR_WIDTH_MEDIUM,
-    MIGRATION_VERIFICATION_THRESHOLD,
-)
+try:
+    from ..constants import (
+        SHA256_HEX_LENGTH,
+        UUID_STRING_LENGTH,
+        SHORT_FIELD_LENGTH,
+        SEPARATOR_WIDTH_SMALL,
+        SEPARATOR_WIDTH_MEDIUM,
+        MIGRATION_VERIFICATION_THRESHOLD,
+    )
+except ImportError:
+    from constants import (
+        SHA256_HEX_LENGTH,
+        UUID_STRING_LENGTH,
+        SHORT_FIELD_LENGTH,
+        SEPARATOR_WIDTH_SMALL,
+        SEPARATOR_WIDTH_MEDIUM,
+        MIGRATION_VERIFICATION_THRESHOLD,
+    )
 
 
 class JSONMigrator:

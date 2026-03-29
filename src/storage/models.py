@@ -34,15 +34,26 @@ import uuid
 
 from .schema_org_base import SchemaOrgSerializable
 
-from constants import (
-    SHA256_HEX_LENGTH,
-    UUID_STRING_LENGTH,
-    MAX_STRING_LENGTH,
-    SHORT_STRING_LENGTH,
-    SHORT_FIELD_LENGTH,
-    GEOHASH_MAX_LENGTH,
-    BASE_PATH_MAX_LENGTH,
-)
+try:
+    from ..constants import (
+        SHA256_HEX_LENGTH,
+        UUID_STRING_LENGTH,
+        MAX_STRING_LENGTH,
+        SHORT_STRING_LENGTH,
+        SHORT_FIELD_LENGTH,
+        GEOHASH_MAX_LENGTH,
+        BASE_PATH_MAX_LENGTH,
+    )
+except ImportError:
+    from constants import (
+        SHA256_HEX_LENGTH,
+        UUID_STRING_LENGTH,
+        MAX_STRING_LENGTH,
+        SHORT_STRING_LENGTH,
+        SHORT_FIELD_LENGTH,
+        GEOHASH_MAX_LENGTH,
+        BASE_PATH_MAX_LENGTH,
+    )
 
 
 # Namespace UUIDs for deterministic ID generation (UUID v5)

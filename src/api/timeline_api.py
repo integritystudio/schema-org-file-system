@@ -13,7 +13,10 @@ from typing import List, Dict, Any, Optional
 from pathlib import Path
 from collections import defaultdict
 
-from constants import COST_DECIMAL_PLACES
+try:
+    from .constants import COST_DECIMAL_PLACES
+except ImportError:
+    from constants import COST_DECIMAL_PLACES
 
 
 class TimelineAPI:

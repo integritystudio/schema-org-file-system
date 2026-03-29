@@ -13,7 +13,10 @@ from pathlib import Path
 from contextlib import contextmanager
 
 from cost_roi_calculator import CostROICalculator, CostTracker
-from constants import SEPARATOR_WIDTH_LARGE, SEPARATOR_WIDTH_SMALL
+try:
+    from .constants import SEPARATOR_WIDTH_LARGE, SEPARATOR_WIDTH_SMALL
+except ImportError:
+    from constants import SEPARATOR_WIDTH_LARGE, SEPARATOR_WIDTH_SMALL
 
 
 # Global calculator instance for easy integration

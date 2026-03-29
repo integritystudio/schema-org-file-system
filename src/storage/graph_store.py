@@ -21,12 +21,20 @@ from .models import (
     OrganizationSession, FileRelationship, CostRecord,
     FileStatus, RelationshipType, file_categories
 )
-from constants import (
-    COORDINATE_TOLERANCE_DEG,
-    DEFAULT_SEARCH_LIMIT,
-    KM_PER_DEGREE_LATITUDE,
-    TOP_EXTENSIONS_LIMIT,
-)
+try:
+    from ..constants import (
+        COORDINATE_TOLERANCE_DEG,
+        DEFAULT_SEARCH_LIMIT,
+        KM_PER_DEGREE_LATITUDE,
+        TOP_EXTENSIONS_LIMIT,
+    )
+except ImportError:
+    from constants import (
+        COORDINATE_TOLERANCE_DEG,
+        DEFAULT_SEARCH_LIMIT,
+        KM_PER_DEGREE_LATITUDE,
+        TOP_EXTENSIONS_LIMIT,
+    )
 
 
 class GraphStore:

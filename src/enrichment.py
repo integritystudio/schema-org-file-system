@@ -12,7 +12,10 @@ import mimetypes
 import hashlib
 import uuid
 
-from constants import SECONDS_PER_HOUR, SECONDS_PER_MINUTE
+try:
+    from .constants import SECONDS_PER_HOUR, SECONDS_PER_MINUTE
+except ImportError:
+    from constants import SECONDS_PER_HOUR, SECONDS_PER_MINUTE
 
 
 class MetadataEnricher:

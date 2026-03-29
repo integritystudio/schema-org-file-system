@@ -11,6 +11,8 @@ import os
 import shutil
 import mimetypes
 import json
+import hashlib
+import uuid
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
@@ -33,8 +35,20 @@ from generators import (
 )
 from base import PropertyType
 from enrichment import MetadataEnricher
-from uri_utils import generate_file_iri, generate_canonical_iri
 from validator import SchemaValidator
+
+_IRI_NAMESPACES = {
+    'company': uuid.UUID('c0e1a2b3-4567-89ab-cdef-012345678901'),
+    'person': uuid.UUID('d1e2a3b4-5678-9abc-def0-123456789012'),
+}
+
+def generate_file_iri(file_path: str) -> str:
+    path_str = str(Path(file_path).resolve())
+    return f"urn:sha256:{hashlib.sha256(path_str.encode()).hexdigest()}"
+
+def generate_canonical_iri(entity_type: str, natural_key: str) -> str:
+    ns = _IRI_NAMESPACES[entity_type.lower()]
+    return f"urn:uuid:{uuid.uuid5(ns, natural_key.lower().strip())}"
 from integration import SchemaRegistry
 
 
