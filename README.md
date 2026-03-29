@@ -2,7 +2,7 @@
 
 AI-powered file organization using CLIP vision, OCR, Schema.org metadata, and entity detection.
 
-**Version:** 1.4.0 | **Python:** 3.8 - 3.14 | **Files Processed:** 265,000+
+**Version:** 2.0.0 | **Python:** 3.8 - 3.14 | **Files Processed:** 265,000+
 
 ## Quick Start
 
@@ -61,14 +61,26 @@ flowchart LR
 ## Project Structure
 
 ```
-├── src/                    # Core library
-│   ├── cli.py              # CLI entry point
-│   ├── generators.py       # Schema.org generators
-│   └── storage/            # GraphStore, models
-├── scripts/                # Organizer scripts
-├── tests/                  # Unit, integration, e2e
-├── _site/                  # Web dashboard
-└── results/                # Database & reports
+├── src/
+│   ├── cli.py                       # CLI entry point
+│   ├── generators.py                # Schema.org generators
+│   ├── api/
+│   │   ├── schema_org_api.py        # FastAPI JSON-LD REST endpoints
+│   │   └── schema_org_models.py     # Pydantic models
+│   └── storage/
+│       ├── graph_store.py           # GraphStore + canonical IDs
+│       ├── models.py                # ORM models with to_schema_org()
+│       ├── schema_org_exporter.py   # Bulk export (JSON / NDJSON / @graph)
+│       ├── schema_org_context.py    # JSON-LD @context generation
+│       └── schema_org_variants.py   # Typed representation variants
+├── scripts/                         # Organizer scripts
+├── tests/
+│   ├── unit/                        # 102 unit tests
+│   ├── integration/                 # Export pipeline integration tests
+│   ├── performance/                 # pytest-benchmark suite
+│   └── e2e/                         # Playwright + OpenTelemetry
+├── _site/                           # Web dashboard
+└── results/                         # Database & reports
 ```
 
 ## Output Folders
@@ -87,7 +99,9 @@ flowchart LR
 
 - **Entity Detection** - Prioritizes Organization and Person identification
 - **Canonical IDs** - UUID v5 + SHA256 for persistent identification
-- **Schema.org Metadata** - Full JSON-LD generation
+- **Schema.org JSON-LD** - Full JSON-LD generation with validated spec URLs on every emitted property
+- **REST API** - FastAPI endpoints returning `{"@context":…,"@graph":[…]}` for all entity types
+- **Bulk Export** - JSON, NDJSON, and `@graph` formats via `SchemaOrgExporter`
 - **Cost Tracking** - ROI calculation with manual time savings
 - **E2E Testing** - Playwright with OpenTelemetry instrumentation
 
@@ -98,8 +112,9 @@ flowchart LR
 | AI/ML | PyTorch, CLIP, OpenCV |
 | OCR | Tesseract |
 | Database | SQLite + SQLAlchemy |
+| API | FastAPI |
 | Monitoring | Sentry SDK |
-| Testing | pytest, Playwright |
+| Testing | pytest, pytest-benchmark, Playwright |
 
 ## Documentation
 
@@ -109,24 +124,31 @@ flowchart LR
 
 ## Changelog
 
-### v1.4.0 (Recent)
+### v2.0.0 (2026-03-28)
+
+**Schema.org Integration**
+- `SchemaOrgExporter` — bulk export in JSON, NDJSON, and `@graph` formats
+- `schema_org_context.py` — standalone JSON-LD `@context` document with `schema:` and `ml:` prefixes
+- `schema_org_variants.py` — `CategoryVariants`, `PersonVariants`, `FileVariants`
+- All five `to_schema_org()` methods annotated with validated `# https://schema.org/` spec URLs
+
+**REST API**
+- FastAPI app at `src/api/schema_org_api.py`
+- Bulk endpoints return proper `{"@context":…,"@graph":[…]}` JSON-LD documents
+- `/api/schema-org/export`, `/api/schema-org/graph`, `/schema/context` endpoints
+
+**Testing**
+- 102 unit tests, 26 integration tests, performance benchmarks (100 / 1k / 10k entities)
+- Per-entity `to_schema_org()` benchmarks and relationship-overhead baseline
+
+### v1.4.0 (2026-03-19)
 
 **Features**
 - Typed subdirectories for screenshot categories
 - Enhanced weak image classification with full CLIP + OCR fallback
 - Shared utilities module consolidating 576 lines of duplication
 
-**Fixes**
-- Route profile.png → Portraits, REWORK.png → Data Visualization
-- Route logo images → Organization/Integrity Studio
-- Legal/contract detection before event pattern matching
-- All 20 content types covered in organize_to_existing.py
-
-**Docs**
-- Visual architecture diagrams with mermaid flowcharts
-- System overview, database schema, and module dependencies
-
-**See full history:** `git log --oneline` | **Last commit:** 4b8f578 (2026-03-19)
+**See full history:** `git log --oneline`
 
 ## Environment Variables
 
@@ -274,6 +296,11 @@ graph TB
         cli[src/cli.py]
     end
 
+    subgraph API
+        soa[schema_org_api.py]
+        som[schema_org_models.py]
+    end
+
     subgraph Scripts
         foc[file_organizer_content_based.py]
         icr[image_content_renamer.py]
@@ -289,6 +316,9 @@ graph TB
     subgraph Storage
         gs[graph_store.py]
         models[models.py]
+        exp[schema_org_exporter.py]
+        ctx[schema_org_context.py]
+        var[schema_org_variants.py]
     end
 
     subgraph External
@@ -296,6 +326,7 @@ graph TB
         tess[Tesseract]
         sentry[Sentry SDK]
         sa[SQLAlchemy]
+        fa[FastAPI]
     end
 
     cli --> foc
@@ -304,4 +335,8 @@ graph TB
     gs --> models --> sa
     err --> sentry
     foc --> torch & tess
+    soa --> exp & ctx & models & som
+    soa --> fa
+    exp --> models
+    var --> models
 ```

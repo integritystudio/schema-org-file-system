@@ -28,8 +28,16 @@ organize-files health                    # Check dependencies
 │   ├── cli.py              # Unified CLI entry point
 │   ├── generators.py       # Schema.org metadata generation
 │   ├── error_tracking.py   # Sentry integration
+│   ├── api/
+│   │   ├── schema_org_api.py    # FastAPI JSON-LD REST endpoints
+│   │   └── schema_org_models.py # Pydantic request/response models
 │   └── storage/
-│       └── graph_store.py  # SQLAlchemy graph with canonical IDs
+│       ├── graph_store.py       # SQLAlchemy graph with canonical IDs
+│       ├── models.py            # ORM models with to_schema_org()
+│       ├── schema_org_exporter.py   # Bulk export (JSON, NDJSON, @graph)
+│       ├── schema_org_context.py    # JSON-LD @context document generation
+│       ├── schema_org_variants.py   # CategoryVariants, PersonVariants, FileVariants
+│       └── schema_org_base.py       # Shared base types
 ├── scripts/
 │   ├── shared/                          # Shared utilities (clip, db, ocr, file ops)
 │   ├── file_organizer_content_based.py  # Main AI organizer
@@ -37,6 +45,8 @@ organize-files health                    # Check dependencies
 │   └── image_content_analyzer.py        # Image content analysis
 ├── tests/
 │   ├── unit/               # Unit tests (pytest)
+│   ├── integration/        # Integration tests (schema.org export pipeline)
+│   ├── performance/        # Benchmark suite (pytest-benchmark)
 │   └── e2e/                # E2E tests (Playwright + OpenTelemetry)
 ├── _site/                  # Dashboard UI
 └── results/                # Reports & database
@@ -89,5 +99,28 @@ pip install -e ".[all]" && brew install tesseract poppler
 | No OCR | `brew install tesseract` |
 | No AI | `pip install torch transformers` |
 
+## REST API
+
+FastAPI app at `src/api/schema_org_api.py`. Key endpoints:
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/{entity}/{id}/schema-org` | Single entity as JSON-LD |
+| `GET /api/{entity}/schema-org/bulk` | Filtered list as `{"@context":…,"@graph":[…]}` |
+| `GET /api/schema-org/export` | Full `@graph` document, filterable by entity type |
+| `GET /api/schema-org/graph` | Full graph, all entity types |
+| `GET /schema/context` | Standalone JSON-LD `@context` document |
+
+Entity types: `files`, `categories`, `companies`, `people`, `locations`.
+
+## Testing
+
+```bash
+pytest tests/unit/           # 102 unit tests
+pytest tests/integration/    # schema.org export pipeline
+pytest tests/performance/ --benchmark-only -m "not slow"   # benchmarks (skip 10k)
+pytest tests/e2e/            # Playwright E2E
+```
+
 ---
-**Python:** 3.14 | **Version:** 1.4.0 | **Files:** 265,000+ processed
+**Python:** 3.14 | **Version:** 2.0.0 | **Files:** 265,000+ processed

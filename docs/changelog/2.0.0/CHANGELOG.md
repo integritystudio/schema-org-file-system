@@ -252,3 +252,103 @@ Completed in `c2ad740` and `8b64fcf` (`REFACTORING_GUIDE.md` integration checkli
 | Typing Modernization | 2 scripts | Updated | ✅ |
 | Context Manager Semantics | 1 issue | Fixed | ✅ |
 | Unit Test Coverage (shared/) | 0% | ✅ Added | ✅ |
+
+---
+
+### Schema.org Testing & Integration
+
+#### S1 — Unit tests for SchemaOrgExporter
+
+**File created:** `tests/unit/test_schema_org_exporter.py`
+
+Covers: `export_to_file`, `export_to_ndjson`, `export_with_graph`, `get_graph_document`, entity-filtered exports.
+Uses `tmp_path` fixture and a seeded in-memory session. 32 tests, all pass.
+Also created: `src/storage/schema_org_exporter.py` (SchemaOrgExporter implementation).
+
+---
+
+#### S2 — Integration tests for schema_org_variants
+
+**File created:** `tests/unit/test_schema_org_variants.py`
+
+Covers: `CategoryVariants`, `PersonVariants`, `FileVariants` — all representations against real model instances.
+28 tests, all pass.
+Also created: `src/storage/schema_org_variants.py` (CategoryVariants, PersonVariants, FileVariants implementation).
+
+---
+
+#### S3 — End-to-end export tests
+
+**File created:** `tests/integration/test_schema_org_export_e2e.py`
+
+Covers: full pipeline from DB population → export → JSON-LD structure validation for all output formats (json, ndjson, @graph).
+26 tests, all pass.
+
+---
+
+#### S4 — Performance testing for export pipeline
+
+**File created:** `tests/performance/test_export_benchmark.py`
+
+Benchmarks all four `SchemaOrgExporter` methods (`get_graph_document`, `export_to_file`, `export_to_ndjson`, `export_with_graph`) at 100, 1k, and 10k entities (10k gated behind `@pytest.mark.slow`).
+Baseline workflow: `pytest tests/performance/ --benchmark-save=baseline -m "not slow"` then `--benchmark-compare=baseline`.
+
+---
+
+#### S5 — Document property mappings in code comments
+
+**Files:** `src/storage/models.py`
+
+All five `to_schema_org()` methods and `File.build_schema_relationships()` annotated with inline `# https://schema.org/<Term>` comments. Custom/non-schema.org properties marked `# custom ml: extension (not schema.org)`. SKOS terms (broader, narrower) noted with W3C reference. All 40 cited URLs validated as current and non-deprecated.
+
+---
+
+#### S6 — Update REST API endpoints to use SchemaOrgExporter
+
+**Files:** `src/api/schema_org_api.py`
+
+Updated bulk export endpoint (`/api/schema-org/export`) to use `SchemaOrgExporter.get_graph_document()` and return a proper JSON-LD `@context`/`@graph` document.
+Added `/api/schema-org/graph` endpoint for full graph export via `SchemaOrgExporter`.
+Added `/schema/context` endpoint that returns the standalone JSON-LD context document.
+Single-entity endpoints remain with direct `model.to_schema_org()`.
+
+---
+
+#### S7 — JSON-LD validation against schema.org
+
+**File created:** `tests/unit/test_schema_org_validation.py`
+
+44 tests, all pass. Uses `jsonschema` with custom schemas covering all five entity types.
+Three test classes: `TestContextAndTypeValidation`, `TestRequiredProperties`, `TestPropertyValueTypes`.
+Validates `@context`, `@type` (against known valid schema.org types), `@id` format, required fields per type, and property value types (strings, ints, booleans, nested objects).
+Covers: File (ImageObject/VideoObject/DigitalDocument), Category (DefinedTerm), Company (Organization), Person, Location (Place/City/Country).
+
+---
+
+#### S8 — JSON-LD context file generation for complex graphs
+
+**Files created/modified:**
+- `src/storage/schema_org_context.py`
+- `src/storage/schema_org_exporter.py`
+- `src/api/schema_org_api.py`
+
+`schema_org_context.py` generates a standalone JSON-LD `@context` document with `@vocab`, `schema:` and `ml:` prefixes, and property mappings for all five entity models.
+`SchemaOrgExporter.get_context_document()` returns the context as a dict; `SchemaOrgExporter.export_context(output_path)` saves to file.
+`/schema/context` API endpoint added to `schema_org_api.py`.
+Covers: `ml:hasFaces`, `ml:fileCount`, `ml:hierarchyLevel`, `ml:mentionCount`, `ml:geoHash`, and all schema.org properties emitted by File/Category/Company/Person/Location models.
+
+---
+
+#### S9 — Search endpoints: include schema.org context in responses
+
+**Files:** `src/api/schema_org_api.py` search/filter endpoints
+
+All five bulk endpoints (`/bulk`) now return `{"@context": ..., "@graph": [...]}` JSON-LD documents instead of bare lists. Added top-level `from storage.schema_org_context import get_context_document` import; removed inline import from `get_schema_context`.
+
+---
+
+#### S10 — Performance impact analysis for schema.org serialization
+
+**Files:** `tests/performance/test_export_benchmark.py`
+
+Added `test_bench_file_to_schema_org` and `test_bench_category_to_schema_org` (per-entity serialization cost, uses `seeded` fixture). Added `_seed_session_with_relations`, `seeded_with_relations` fixture, and `test_bench_get_graph_document_with_relations` (relationship-building overhead). All run at 100/1k (10k gated as slow). 14 tests total, all pass.
