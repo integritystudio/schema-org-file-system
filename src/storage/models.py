@@ -304,51 +304,51 @@ class File(Base, SchemaOrgSerializable):
 
         result = {
             "@context": "https://schema.org",
-            "@type": schema_type,
+            "@type": schema_type,        # https://schema.org/ImageObject | https://schema.org/VideoObject | https://schema.org/DigitalDocument
             "@id": self.get_iri(),
-            "name": self.filename,
+            "name": self.filename,       # https://schema.org/name
         }
 
         # Add optional properties if present
         if self.created_at:
-            result["dateCreated"] = self.created_at.isoformat()
+            result["dateCreated"] = self.created_at.isoformat()      # https://schema.org/dateCreated
 
         if self.modified_at:
-            result["dateModified"] = self.modified_at.isoformat()
+            result["dateModified"] = self.modified_at.isoformat()    # https://schema.org/dateModified
 
         if self.mime_type:
-            result["encodingFormat"] = self.mime_type
+            result["encodingFormat"] = self.mime_type                # https://schema.org/encodingFormat
 
         if self.file_size:
-            result["contentSize"] = str(self.file_size)
+            result["contentSize"] = str(self.file_size)              # https://schema.org/contentSize
 
         if self.original_path:
-            result["url"] = self.original_path
+            result["url"] = self.original_path                       # https://schema.org/url
 
         if self.extracted_text:
             # Truncate to reasonable length for embedding
-            result["text"] = self.extracted_text[:2000]
+            result["text"] = self.extracted_text[:2000]              # https://schema.org/text
 
         # Add image metadata if present
         if schema_type == "ImageObject":
             if self.image_width:
-                result["width"] = self.image_width
+                result["width"] = self.image_width                   # https://schema.org/width
             if self.image_height:
-                result["height"] = self.image_height
+                result["height"] = self.image_height                 # https://schema.org/height
 
             if self.has_faces is not None:
-                result["hasFaces"] = self.has_faces
+                result["hasFaces"] = self.has_faces                  # custom ml: extension (not schema.org)
 
             if self.exif_datetime:
-                result["datePublished"] = self.exif_datetime.isoformat()
+                result["datePublished"] = self.exif_datetime.isoformat()  # https://schema.org/datePublished
 
             if self.gps_latitude and self.gps_longitude:
-                result["contentLocation"] = {
-                    "@type": "Place",
-                    "geo": {
-                        "@type": "GeoCoordinates",
-                        "latitude": self.gps_latitude,
-                        "longitude": self.gps_longitude
+                result["contentLocation"] = {                        # https://schema.org/contentLocation
+                    "@type": "Place",                                # https://schema.org/Place
+                    "geo": {                                         # https://schema.org/geo
+                        "@type": "GeoCoordinates",                   # https://schema.org/GeoCoordinates
+                        "latitude": self.gps_latitude,               # https://schema.org/latitude
+                        "longitude": self.gps_longitude              # https://schema.org/longitude
                     }
                 }
 
@@ -365,11 +365,11 @@ class File(Base, SchemaOrgSerializable):
 
         # Add categories
         if self.categories:
-            relationships["about"] = [
+            relationships["about"] = [       # https://schema.org/about
                 {
-                    "@type": "DefinedTerm",
+                    "@type": "DefinedTerm",  # https://schema.org/DefinedTerm
                     "@id": cat.get_iri(),
-                    "name": cat.name
+                    "name": cat.name         # https://schema.org/name
                 }
                 for cat in self.categories
             ]
@@ -379,9 +379,9 @@ class File(Base, SchemaOrgSerializable):
         if self.companies:
             mentions.extend([
                 {
-                    "@type": "Organization",
+                    "@type": "Organization", # https://schema.org/Organization
                     "@id": comp.get_iri(),
-                    "name": comp.name
+                    "name": comp.name        # https://schema.org/name
                 }
                 for comp in self.companies
             ])
@@ -389,30 +389,30 @@ class File(Base, SchemaOrgSerializable):
         if self.people:
             mentions.extend([
                 {
-                    "@type": "Person",
+                    "@type": "Person",       # https://schema.org/Person
                     "@id": person.get_iri(),
-                    "name": person.name
+                    "name": person.name      # https://schema.org/name
                 }
                 for person in self.people
             ])
 
         if mentions:
-            relationships["mentions"] = mentions
+            relationships["mentions"] = mentions  # https://schema.org/mentions
 
         # Add locations
         if self.locations:
             if len(self.locations) == 1:
-                relationships["spatialCoverage"] = {
-                    "@type": "Place",
+                relationships["spatialCoverage"] = {    # https://schema.org/spatialCoverage
+                    "@type": "Place",                   # https://schema.org/Place
                     "@id": self.locations[0].get_iri(),
-                    "name": self.locations[0].name
+                    "name": self.locations[0].name      # https://schema.org/name
                 }
             else:
-                relationships["spatialCoverage"] = [
+                relationships["spatialCoverage"] = [    # https://schema.org/spatialCoverage
                     {
-                        "@type": "Place",
+                        "@type": "Place",               # https://schema.org/Place
                         "@id": loc.get_iri(),
-                        "name": loc.name
+                        "name": loc.name                # https://schema.org/name
                     }
                     for loc in self.locations
                 ]
@@ -521,56 +521,56 @@ class Category(Base, SchemaOrgSerializable):
 
         result = {
             "@context": "https://schema.org",
-            "@type": self.get_schema_type(),
+            "@type": self.get_schema_type(),     # https://schema.org/DefinedTerm
             "@id": self.get_iri(),
-            "name": self.name,
+            "name": self.name,                   # https://schema.org/name
         }
 
         # Add identifier (hierarchical path)
         if self.full_path:
-            result["identifier"] = self.full_path.lower().replace('/', '-')
+            result["identifier"] = self.full_path.lower().replace('/', '-')  # https://schema.org/identifier
 
         # Add definition/description
         if self.description:
-            result["definition"] = self.description
+            result["definition"] = self.description          # custom: no schema.org equivalent; closest is https://schema.org/description
         else:
-            result["definition"] = f"Category: {self.name}"
+            result["definition"] = f"Category: {self.name}" # custom: see above
 
         # Add taxonomy membership
-        result["inDefinedTermSet"] = {
-            "@type": "DefinedTermSet",
+        result["inDefinedTermSet"] = {           # https://schema.org/inDefinedTermSet
+            "@type": "DefinedTermSet",           # https://schema.org/DefinedTermSet
             "@id": "urn:uuid:categories-taxonomy",
-            "name": "File Organization Categories"
+            "name": "File Organization Categories"  # https://schema.org/name
         }
 
         # Add parent category (broader)
         if self.parent:
-            result["broader"] = {
-                "@type": "DefinedTerm",
+            result["broader"] = {                # SKOS: https://www.w3.org/TR/skos-reference/#broader (not schema.org)
+                "@type": "DefinedTerm",          # https://schema.org/DefinedTerm
                 "@id": self.parent.get_iri(),
-                "name": self.parent.name
+                "name": self.parent.name         # https://schema.org/name
             }
 
         # Add child categories (narrower) if loaded
         if self.subcategories:
-            result["narrower"] = [
+            result["narrower"] = [               # SKOS: https://www.w3.org/TR/skos-reference/#narrower (not schema.org)
                 {
-                    "@type": "DefinedTerm",
+                    "@type": "DefinedTerm",      # https://schema.org/DefinedTerm
                     "@id": subcat.get_iri(),
-                    "name": subcat.name
+                    "name": subcat.name          # https://schema.org/name
                 }
                 for subcat in self.subcategories
             ]
 
         # Custom extensions
-        result["fileCount"] = self.file_count or 0
-        result["hierarchyLevel"] = self.level or 0
+        result["fileCount"] = self.file_count or 0      # custom ml: extension (not schema.org)
+        result["hierarchyLevel"] = self.level or 0      # custom ml: extension (not schema.org)
 
         if self.icon:
-            result["icon"] = self.icon
+            result["icon"] = self.icon                  # custom extension (not schema.org)
 
         if self.color:
-            result["color"] = self.color
+            result["color"] = self.color                # custom extension (not schema.org)
 
         return result
 
@@ -667,30 +667,30 @@ class Company(Base, SchemaOrgSerializable):
 
         result = {
             "@context": "https://schema.org",
-            "@type": self.get_schema_type(),
+            "@type": self.get_schema_type(),    # https://schema.org/Organization
             "@id": self.get_iri(),
-            "name": self.name,
+            "name": self.name,                  # https://schema.org/name
         }
 
         # Add website URL
         if self.domain:
             url = self.domain if self.domain.startswith(('http://', 'https://')) else f"https://{self.domain}"
-            result["url"] = url
+            result["url"] = url                 # https://schema.org/url
 
         # Add industry/sector
         if self.industry:
-            result["knowsAbout"] = self.industry
+            result["knowsAbout"] = self.industry  # https://schema.org/knowsAbout
 
         # Add founding date if available
         if self.first_seen:
-            result["dateFounded"] = self.first_seen.date().isoformat()
+            result["dateFounded"] = self.first_seen.date().isoformat()  # custom: non-standard; schema.org uses https://schema.org/foundingDate
 
         # Add metadata timestamps
         if self.first_seen:
-            result["dateCreated"] = self.first_seen.isoformat()
+            result["dateCreated"] = self.first_seen.isoformat()   # https://schema.org/dateCreated
 
         if self.last_seen:
-            result["dateModified"] = self.last_seen.isoformat()
+            result["dateModified"] = self.last_seen.isoformat()   # https://schema.org/dateModified
 
         # Add external references
         same_as = []
@@ -701,10 +701,10 @@ class Company(Base, SchemaOrgSerializable):
         same_as.append(self.generate_wikidata_url(self.name))
 
         if same_as:
-            result["sameAs"] = [url for url in same_as if url]
+            result["sameAs"] = [url for url in same_as if url]    # https://schema.org/sameAs
 
         # Custom tracking properties
-        result["mentionCount"] = self.file_count or 0
+        result["mentionCount"] = self.file_count or 0  # custom ml: extension (not schema.org)
 
         return result
 
@@ -788,28 +788,28 @@ class Person(Base, SchemaOrgSerializable):
 
         result = {
             "@context": "https://schema.org",
-            "@type": self.get_schema_type(),
+            "@type": self.get_schema_type(),    # https://schema.org/Person
             "@id": self.get_iri(),
-            "name": self.name,
+            "name": self.name,                  # https://schema.org/name
         }
 
         # Add email if present
         if self.email:
-            result["email"] = self.email
+            result["email"] = self.email        # https://schema.org/email
 
         # Add job title/role
         if self.role:
-            result["jobTitle"] = self.role
+            result["jobTitle"] = self.role      # https://schema.org/jobTitle
 
         # Add temporal data
         if self.first_seen:
-            result["dateCreated"] = self.first_seen.isoformat()
+            result["dateCreated"] = self.first_seen.isoformat()   # https://schema.org/dateCreated
 
         if self.last_seen:
-            result["dateModified"] = self.last_seen.isoformat()
+            result["dateModified"] = self.last_seen.isoformat()   # https://schema.org/dateModified
 
         # Custom tracking
-        result["mentionCount"] = self.file_count or 0
+        result["mentionCount"] = self.file_count or 0  # custom ml: extension (not schema.org)
 
         return result
 
@@ -932,49 +932,49 @@ class Location(Base, SchemaOrgSerializable):
 
         result = {
             "@context": "https://schema.org",
-            "@type": schema_type,
+            "@type": schema_type,               # https://schema.org/Place | https://schema.org/City | https://schema.org/Country
             "@id": self.get_iri(),
-            "name": self.name,
+            "name": self.name,                  # https://schema.org/name
         }
 
         # Add structured address
         address = {}
         if self.city:
-            address["addressLocality"] = self.city
+            address["addressLocality"] = self.city       # https://schema.org/addressLocality
         if self.state:
-            address["addressRegion"] = self.state
+            address["addressRegion"] = self.state        # https://schema.org/addressRegion
         if self.country:
             # Use country code if 2 chars, otherwise country name
             country = self.country
             if len(country) == 2:
-                address["addressCountry"] = country
+                address["addressCountry"] = country      # https://schema.org/addressCountry
             else:
-                address["addressCountry"] = country[:2]  # Attempt to extract code
+                address["addressCountry"] = country[:2]  # Attempt to extract code  # https://schema.org/addressCountry
 
         if address:
-            result["address"] = {
-                "@type": "PostalAddress",
+            result["address"] = {               # https://schema.org/address
+                "@type": "PostalAddress",       # https://schema.org/PostalAddress
                 **address
             }
 
         # Add geographic coordinates
         if self.latitude is not None and self.longitude is not None:
-            result["geo"] = {
-                "@type": "GeoCoordinates",
-                "latitude": self.latitude,
-                "longitude": self.longitude
+            result["geo"] = {                   # https://schema.org/geo
+                "@type": "GeoCoordinates",      # https://schema.org/GeoCoordinates
+                "latitude": self.latitude,      # https://schema.org/latitude
+                "longitude": self.longitude     # https://schema.org/longitude
             }
 
         # Add custom geohash property
         if self.geohash:
-            result["geoHash"] = self.geohash
+            result["geoHash"] = self.geohash    # custom ml: extension (not schema.org)
 
         # Add timestamp
         if self.created_at:
-            result["dateCreated"] = self.created_at.isoformat()
+            result["dateCreated"] = self.created_at.isoformat()  # https://schema.org/dateCreated
 
         # Custom tracking
-        result["mentionCount"] = self.file_count or 0
+        result["mentionCount"] = self.file_count or 0  # custom ml: extension (not schema.org)
 
         return result
 

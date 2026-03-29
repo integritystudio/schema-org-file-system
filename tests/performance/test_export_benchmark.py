@@ -20,14 +20,14 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 _SRC_DIR = Path(__file__).parent.parent.parent / "src"
 if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
-from storage.models import Base, Category, File
+from storage.models import Base, Category, File, file_categories
 from storage.schema_org_exporter import SchemaOrgExporter
 
 
@@ -157,3 +157,89 @@ def test_bench_export_with_graph(benchmark, seeded, tmp_path):
     out = tmp_path / "export_graph.json"
     count = benchmark(exporter.export_with_graph, out, [File, Category], False)
     assert count == n * 2
+
+
+# ---------------------------------------------------------------------------
+# Per-entity to_schema_org() serialization cost
+# ---------------------------------------------------------------------------
+
+
+def test_bench_file_to_schema_org(benchmark, seeded):
+    """Measures raw File.to_schema_org() cost without exporter overhead."""
+    session, n = seeded
+    files = session.query(File).all()
+    result = benchmark(lambda: [f.to_schema_org() for f in files])
+    assert len(result) == n
+
+
+def test_bench_category_to_schema_org(benchmark, seeded):
+    """Measures raw Category.to_schema_org() cost without exporter overhead."""
+    session, n = seeded
+    categories = session.query(Category).all()
+    result = benchmark(lambda: [c.to_schema_org() for c in categories])
+    assert len(result) == n
+
+
+# ---------------------------------------------------------------------------
+# Relationship-building overhead
+# ---------------------------------------------------------------------------
+
+
+def _seed_session_with_relations(n: int) -> Session:
+    """Create a seeded session with n Files, n Categories, and n file-category associations.
+
+    Each file is linked to one category (file i → category i % n).
+    """
+    engine = create_engine("sqlite:///:memory:", echo=False)
+    Base.metadata.create_all(engine)
+    session = sessionmaker(bind=engine)()
+
+    files = [
+        File(
+            id=_hex64(i),
+            filename=f"file_{i}.pdf",
+            original_path=f"/docs/file_{i}.pdf",
+            mime_type="application/pdf",
+            file_size=1024 * (i % 100 + 1),
+            canonical_id=f"urn:sha256:{_hex64(i)}",
+        )
+        for i in range(n)
+    ]
+    categories = [
+        Category(
+            name=f"Category_{i}",
+            canonical_id=_uuid_str("cat", i),
+            full_path=f"Category_{i}",
+            level=0,
+        )
+        for i in range(n)
+    ]
+    session.bulk_save_objects(files)
+    session.bulk_save_objects(categories)
+    session.commit()
+
+    cat_ids = [row[0] for row in session.execute(text("SELECT id FROM categories ORDER BY id")).fetchall()]
+    associations = [
+        {"file_id": _hex64(i), "category_id": cat_ids[i % n], "confidence": 1.0}
+        for i in range(n)
+    ]
+    session.execute(file_categories.insert(), associations)
+    session.commit()
+    return session
+
+
+@pytest.fixture(params=_SIZES)
+def seeded_with_relations(request) -> tuple[Session, int]:
+    """Yields (session, n) with file-category relationships populated."""
+    n: int = request.param
+    session = _seed_session_with_relations(n)
+    yield session, n
+    session.close()
+
+
+def test_bench_get_graph_document_with_relations(benchmark, seeded_with_relations):
+    """Measures get_graph_document overhead when file-category relationships are populated."""
+    session, n = seeded_with_relations
+    exporter = SchemaOrgExporter(session)
+    result = benchmark(exporter.get_graph_document, [File, Category])
+    assert len(result["@graph"]) == n * 2
