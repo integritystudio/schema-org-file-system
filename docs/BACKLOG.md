@@ -30,3 +30,9 @@ Add inline comments mapping each emitted property to its schema.org spec URL (e.
 **Source:** `REFACTORING_INDEX.md` Phase 4
 Benchmark `SchemaOrgExporter` against representative data sizes (1k, 10k, 100k entities).
 Establish baseline and add regression guard (e.g., pytest-benchmark).
+
+### S6 — Update REST API endpoints to use SchemaOrgExporter
+**Source:** `RECOMMENDATIONS_APPLIED.md` Phase 4
+**Files:** REST API endpoint handlers (locate via `grep -r "schema_org" src/`)
+Update all REST API endpoints to serve JSON-LD output via `SchemaOrgExporter` rather than
+ad-hoc serialization. Ensure `@context` and `@graph` structure is preserved in responses.

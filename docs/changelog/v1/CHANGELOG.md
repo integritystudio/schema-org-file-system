@@ -2,6 +2,90 @@
 
 All notable changes to the Schema.org File Organization System.
 
+## [1.6.0] - 2026-03-28
+
+### Added
+
+- **SchemaOrgSerializable mixin** (`src/storage/schema_org_base.py`) — JSON-LD interface standardized across all models (`575d2d8`)
+- **Unit tests for scripts/shared/** (`tests/unit/test_shared.py`) — 141 lines covering `resolve_collision`, `get_db_connection`, `db_connection`, `extract_ocr_text` (`a63eac7`)
+
+### Refactored
+
+- Wire `SchemaOrgSerializable` into all storage models; retire `REFACTORING_INDEX.md` (`95a98a9`)
+- Replace EXIF magic numbers with named constants in `image_content_renamer.py` (`235fb18`)
+- Update typing imports to modern syntax (`str | None` over `Optional[str]`) in `analyze_renamed_files.py` and `image_content_renamer.py` (`0eaad81`)
+
+### Fixed
+
+- Fix `Image.open()` file handle leak in `image_content_renamer.py` — use context manager in `_get_date_string` (`5c69a40`)
+- Document `_ABBREV_TO_CONTENT` first-match priority in `organize_to_existing.py` (`dfe639c`)
+- Add `db_connection()` auto-commit documentation to `scripts/shared/db_utils.py` (`4a12c93`)
+
+---
+
+## [1.5.0] - 2026-03-24
+
+### Fixed
+
+#### JSON-LD Compliance — Remove non-standard keys from exporter
+
+Removed non-standard `generated` and `entityCount` fields from `export_with_graph()` output.
+Exports now conform to the JSON-LD specification: `{"@context": "...", "@graph": [...]}` only.
+
+**File:** `src/storage/schema_org_exporter.py`
+
+---
+
+#### Replace deprecated `datetime.utcnow()`
+
+Removed the only usage of `datetime.utcnow()` (deprecated in Python 3.12+).
+Added `timezone` to imports for future-safe datetime handling via `datetime.now(timezone.utc)`.
+
+**File:** `src/storage/schema_org_exporter.py`
+
+---
+
+#### Country code truncation bug in `build_postal_address()`
+
+`country[:2]` produced invalid ISO codes (e.g. `'France' → 'Fr'`).
+Added `_COUNTRY_CODE_MAPPING` (30+ countries) and `_normalize_country_code()` with support for:
+- 2-char ISO codes (`'US' → 'US'`)
+- Full country names (`'France' → 'FR'`)
+- Case-insensitive and prefix matching (`'fra' → 'FR'`)
+
+**File:** `src/storage/schema_org_builders.py`
+
+---
+
+### Refactored
+
+#### Remove duplicate `build_schema_reference()` definition
+
+`build_schema_reference()` in `schema_org_base.py` was identical to `build_entity_reference()`
+in `schema_org_builders.py`. Removed the duplicate; canonical definition lives in builders.
+
+**Files:** `src/storage/schema_org_base.py`, `src/storage/schema_org_builders.py`
+
+---
+
+#### Namespace custom `hasFaces` property on `ImageObject`
+
+`hasFaces` is not a standard schema.org property. Renamed to `ml:hasFaces` to indicate a
+machine-learning custom extension. Requires a custom `@context` entry to resolve:
+
+```json
+{
+  "@context": {
+    "@vocab": "https://schema.org/",
+    "ml": "https://example.org/ml-properties/"
+  }
+}
+```
+
+**File:** `src/storage/schema_org_builders.py`
+
+---
+
 ## [1.4.0] - 2026-02-01
 
 ### Added
