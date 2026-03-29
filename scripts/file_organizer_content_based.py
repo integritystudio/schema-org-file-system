@@ -2257,6 +2257,7 @@ class ContentBasedFileOrganizer:
             'adobe': ('organization', 'vendors', 'Adobe Systems'),
             'amazon': ('organization', 'vendors', 'Amazon'),
             'apple': ('organization', 'vendors', 'Apple'),
+            'genius bar': ('organization', 'vendors', 'Apple'),
         }
         for pattern, (category, subcat, company_name) in entity_patterns.items():
             if pattern in stem:
@@ -2592,7 +2593,9 @@ class ContentBasedFileOrganizer:
                     print(f"  ✓ Filename pattern: Marketing screenshot")
                     return ('business', 'marketing', None, [])
             # Pattern: name_hash.png (animal_57886bff.png, drop_2_6.png)
-            if not is_camera_photo and not is_software_screenshot and re.match(r'^[a-z]+(_[a-z0-9]+)+$', stem):
+            # Exclude files where original stem has uppercase — those are human-named, not generated assets
+            has_uppercase = any(c.isupper() for c in original_stem)
+            if not is_camera_photo and not is_software_screenshot and not has_uppercase and re.match(r'^[a-z]+(_[a-z0-9]+)+$', stem):
                 print(f"  ✓ Filename pattern: Game asset (named)")
                 return ('game_assets', 'sprites', None, [])
             # Pattern: _hash or _name (starts with underscore, like _RWOIsUgWGL.png)
@@ -2625,7 +2628,12 @@ class ContentBasedFileOrganizer:
                               'rework'}
             branding_terms = {'logo', 'logos', 'logotype', 'favicon', 'brandmark', 'wordmark'}
             portrait_terms = {'profile', 'headshot', 'portrait', 'avatar'}
-            if re.match(r'^[a-z]+$', stem) and len(stem) > 2 and stem not in data_viz_terms and stem not in branding_terms and stem not in portrait_terms:
+            # Generic download names — no info about content, let fall through to CLIP/OCR
+            generic_download_names = {'unnamed', 'untitled', 'image', 'photo', 'picture', 'screenshot', 'download'}
+            # Tech product substrings — compound words describing real hardware, not game assets
+            tech_product_substrings = {'macbook', 'iphone', 'ipad', 'airpods', 'android', 'laptop', 'tablet', 'keyboard', 'monitor', 'charger', 'adapter'}
+            is_tech_product = any(t in stem for t in tech_product_substrings)
+            if re.match(r'^[a-z]+$', stem) and len(stem) > 2 and stem not in data_viz_terms and stem not in branding_terms and stem not in portrait_terms and stem not in generic_download_names and not is_tech_product:
                 print(f"  ✓ Filename pattern: Game asset (single word)")
                 return ('game_assets', 'sprites', None, [])
             # Pattern: data visualization single word
@@ -2692,11 +2700,12 @@ class ContentBasedFileOrganizer:
                 print(f"  ✓ Filename pattern: Named image")
                 return ('media', 'photos_other', None, [])
             # Pattern: letter+number sprites (l10.png, l20_1.png, note01.png, img1.png)
-            if re.match(r'^[a-z]+\d+(_\d+)?$', stem):
+            # Exclude uppercase-origin filenames — human-named files, not generated game assets
+            if not has_uppercase and re.match(r'^[a-z]+\d+(_\d+)?$', stem):
                 print(f"  ✓ Filename pattern: Sprite sequence")
                 return ('game_assets', 'sprites', None, [])
             # Pattern: word+number (drake2.png, grave2.png, void2.png)
-            if re.match(r'^[a-z]+\d$', stem):
+            if not has_uppercase and re.match(r'^[a-z]+\d$', stem):
                 print(f"  ✓ Filename pattern: Numbered variant")
                 return ('game_assets', 'sprites', None, [])
             # Pattern: hyphenated names (heart-beat.png, phone-call.png)
