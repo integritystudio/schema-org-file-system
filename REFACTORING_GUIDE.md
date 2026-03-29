@@ -293,14 +293,14 @@ class Category(Base, SchemaOrgSerializable):
 
 ## Next Steps
 
-1. Create unit tests for each new module
-2. Implement integration tests showing end-to-end flow
-3. Update REST API endpoints to use SchemaOrgExporter
-4. Add validation that exported JSON-LD is valid against schema.org
-5. Document property mappings in code comments
-6. Consider JSON-LD context file generation for complex graphs
+1. ~~Create unit tests for each new module~~ — done (`c2ad740`: `tests/test_schema_org_serialization.py`, 16 test methods covering all entities, relationships, MIME mapping, and JSON-LD validity)
+2. ~~Implement integration tests showing end-to-end flow~~ — done (`d99e979`: Playwright + OpenTelemetry e2e tests added)
+3. ~~Update REST API endpoints to use SchemaOrgExporter~~ — done (`c2ad740`: 15 FastAPI endpoints; `e989a88`: Pydantic `response_model=` on all endpoints with Depends() validation)
+4. Add validation that exported JSON-LD is valid against schema.org — partial (tests assert structural JSON-LD validity; no external schema.org validator integration)
+5. ~~Document property mappings in code comments~~ — done (`8b64fcf`: `ALIGNMENT_QUICK_REFERENCE.md`, `SCHEMA_ORG_ALIGNMENT.md`, `IMPLEMENTATION_EXAMPLES.md` added)
+6. Consider JSON-LD context file generation for complex graphs — not started
 
 ---
 
-**Version:** 1.1 (Refactored)
-**Date:** 2026-03-24
+**Version:** 1.2 (Next Steps Updated)
+**Date:** 2026-03-28
