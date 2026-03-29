@@ -10,7 +10,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload, joinedload
 
 from storage.models import (
     File, Category, Company, Person, Location,
@@ -88,7 +88,12 @@ async def get_files_schema_org_bulk(
     if params.mime_type:
         query = query.filter(File.mime_type == params.mime_type)
 
-    files = query.offset(params.skip).limit(params.limit).all()
+    files = query.options(
+        selectinload(File.categories),
+        selectinload(File.companies),
+        selectinload(File.people),
+        selectinload(File.locations),
+    ).offset(params.skip).limit(params.limit).all()
     return {
         "@context": get_context_document()["@context"],
         "@graph": [file.to_schema_org() for file in files],
@@ -133,7 +138,11 @@ async def get_categories_schema_org_bulk(
     if params.level is not None:
         query = query.filter(Category.level == params.level)
 
-    categories = query.offset(params.skip).limit(params.limit).all()
+    categories = query.options(
+        selectinload(Category.files),
+        joinedload(Category.parent),
+        selectinload(Category.subcategories),
+    ).offset(params.skip).limit(params.limit).all()
     return {
         "@context": get_context_document()["@context"],
         "@graph": [category.to_schema_org() for category in categories],
@@ -199,7 +208,9 @@ async def get_companies_schema_org_bulk(
     if params.industry:
         query = query.filter(Company.industry == params.industry)
 
-    companies = query.offset(params.skip).limit(params.limit).all()
+    companies = query.options(
+        selectinload(Company.files),
+    ).offset(params.skip).limit(params.limit).all()
     return {
         "@context": get_context_document()["@context"],
         "@graph": [company.to_schema_org() for company in companies],
@@ -265,7 +276,9 @@ async def get_people_schema_org_bulk(
     if params.role:
         query = query.filter(Person.role == params.role)
 
-    people = query.offset(params.skip).limit(params.limit).all()
+    people = query.options(
+        selectinload(Person.files),
+    ).offset(params.skip).limit(params.limit).all()
     return {
         "@context": get_context_document()["@context"],
         "@graph": [person.to_schema_org() for person in people],
@@ -331,7 +344,9 @@ async def get_locations_schema_org_bulk(
     if params.country:
         query = query.filter(Location.country == params.country)
 
-    locations = query.offset(params.skip).limit(params.limit).all()
+    locations = query.options(
+        selectinload(Location.files),
+    ).offset(params.skip).limit(params.limit).all()
     return {
         "@context": get_context_document()["@context"],
         "@graph": [location.to_schema_org() for location in locations],

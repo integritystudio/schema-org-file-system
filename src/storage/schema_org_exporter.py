@@ -11,14 +11,11 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Type, Union
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload, joinedload
 
 from .schema_org_base import SchemaOrgSerializable
 
 SCHEMA_ORG_CONTEXT = "https://schema.org"
-
-# Sentinel used in export_with_graph to populate all known entity classes
-_SENTINEL_ALL = object()
 
 
 class SchemaOrgExporter:
@@ -193,10 +190,14 @@ class SchemaOrgExporter:
         if entity_classes is None:
             entity_classes = self._default_entity_classes()
 
+        load_options = self._build_load_options()
         records: List[Dict[str, Any]] = []
         for cls in entity_classes:
-            rows = self._session.query(cls).all()
-            for row in rows:
+            opts = load_options.get(cls, [])
+            q = self._session.query(cls)
+            if opts:
+                q = q.options(*opts)
+            for row in q.all():
                 records.append(row.to_schema_org())
         return records
 
@@ -228,6 +229,27 @@ class SchemaOrgExporter:
         """
         from .schema_org_context import export_context
         export_context(output_path, pretty=pretty)
+
+    @staticmethod
+    def _build_load_options() -> Dict[Type, List]:
+        """Return per-entity selectinload options to avoid N+1 queries."""
+        from .models import File, Category, Company, Person, Location
+        return {
+            File: [
+                selectinload(File.categories),
+                selectinload(File.companies),
+                selectinload(File.people),
+                selectinload(File.locations),
+            ],
+            Category: [
+                selectinload(Category.files),
+                joinedload(Category.parent),
+                selectinload(Category.subcategories),
+            ],
+            Company: [selectinload(Company.files)],
+            Person: [selectinload(Person.files)],
+            Location: [selectinload(Location.files)],
+        }
 
     @staticmethod
     def _default_entity_classes() -> List[Type[SchemaOrgSerializable]]:
