@@ -121,6 +121,7 @@ flowchart LR
 - [CHANGELOG](docs/CHANGELOG.md) - Version history
 - [DEPENDENCIES](docs/DEPENDENCIES.md) - Installation guide
 - [ARCHITECTURE_REFACTOR](docs/ARCHITECTURE_REFACTOR.md) - Design decisions
+- [SCHEMA_ORG_ARCHITECTURE](docs/SCHEMA_ORG_ARCHITECTURE.md) - Schema.org type mappings, IRI patterns, JSON-LD context, and implementation reference
 
 ## Changelog
 

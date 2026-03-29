@@ -99,6 +99,10 @@ pip install -e ".[all]" && brew install tesseract poppler
 | No OCR | `brew install tesseract` |
 | No AI | `pip install torch transformers` |
 
+## Schema.org Reference
+
+See [`docs/SCHEMA_ORG_ARCHITECTURE.md`](docs/SCHEMA_ORG_ARCHITECTURE.md) for type mappings, IRI generation, JSON-LD context, per-entity `to_schema_org()` implementations, and relationship rules.
+
 ## REST API
 
 FastAPI app at `src/api/schema_org_api.py`. Key endpoints:
