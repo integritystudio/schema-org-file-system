@@ -13,7 +13,7 @@ from typing import Dict, List, Optional, Any, Tuple
 from collections import defaultdict
 
 from sqlalchemy import create_engine, event, func, and_, or_
-from sqlalchemy.orm import Session, sessionmaker, joinedload
+from sqlalchemy.orm import Session, sessionmaker, joinedload, selectinload
 from sqlalchemy.exc import IntegrityError
 
 from .models import (
@@ -386,15 +386,15 @@ class GraphStore:
         session = session or self.get_session()
 
         try:
-            categories = session.query(Category).order_by(Category.level, Category.name).all()
+            categories = session.query(Category).options(
+                selectinload(Category.subcategories).selectinload(Category.subcategories)
+            ).order_by(Category.level, Category.name).all()
 
             # Build tree structure
             tree = []
-            category_map = {c.id: c for c in categories}
-
             for category in categories:
                 if category.parent_id is None:
-                    tree.append(self._build_category_node(category, category_map))
+                    tree.append(self._build_category_node(category))
 
             return tree
 
@@ -402,14 +402,10 @@ class GraphStore:
             if close_session:
                 session.close()
 
-    def _build_category_node(self, category: Category, category_map: Dict) -> Dict[str, Any]:
+    def _build_category_node(self, category: Category) -> Dict[str, Any]:
         """Build a category tree node recursively."""
         node = category.to_dict()
-        node['subcategories'] = []
-
-        for sub in category.subcategories:
-            node['subcategories'].append(self._build_category_node(sub, category_map))
-
+        node['subcategories'] = [self._build_category_node(sub) for sub in category.subcategories]
         return node
 
     # =========================================================================
@@ -771,6 +767,8 @@ class GraphStore:
 
             for _ in range(depth):
                 next_level = []
+                # Collect (file_id, rel_type, confidence) for all new nodes at this level
+                pending: list[tuple[int, str, float]] = []
 
                 for current_id in current_level:
                     # Get outgoing relationships
@@ -784,9 +782,7 @@ class GraphStore:
                         if rel.target_file_id not in visited:
                             visited.add(rel.target_file_id)
                             next_level.append(rel.target_file_id)
-                            file = session.query(File).filter(File.id == rel.target_file_id).first()
-                            if file:
-                                results.append((file, rel.relationship_type, rel.confidence))
+                            pending.append((rel.target_file_id, rel.relationship_type, rel.confidence))
 
                     # Get incoming relationships
                     query = session.query(FileRelationship).filter(
@@ -799,9 +795,19 @@ class GraphStore:
                         if rel.source_file_id not in visited:
                             visited.add(rel.source_file_id)
                             next_level.append(rel.source_file_id)
-                            file = session.query(File).filter(File.id == rel.source_file_id).first()
-                            if file:
-                                results.append((file, rel.relationship_type, rel.confidence))
+                            pending.append((rel.source_file_id, rel.relationship_type, rel.confidence))
+
+                # Batch-load all new files for this BFS level in a single query
+                if pending:
+                    pending_ids = [fid for fid, _, _ in pending]
+                    file_map = {
+                        f.id: f
+                        for f in session.query(File).filter(File.id.in_(pending_ids)).all()
+                    }
+                    for fid, rel_type, confidence in pending:
+                        file = file_map.get(fid)
+                        if file:
+                            results.append((file, rel_type, confidence))
 
                 current_level = next_level
 
@@ -837,12 +843,13 @@ class GraphStore:
                 .having(func.count(File.id) > 1)\
                 .all()
 
-            result = []
-            for hash_val, _ in duplicates:
-                files = session.query(File).filter(File.content_hash == hash_val).all()
-                result.append(files)
+            duplicate_hashes = [h for h, _ in duplicates]
+            all_files = session.query(File).filter(File.content_hash.in_(duplicate_hashes)).all()
+            groups: defaultdict = defaultdict(list)
+            for f in all_files:
+                groups[f.content_hash].append(f)
 
-            return result
+            return list(groups.values())
 
         finally:
             if close_session:
