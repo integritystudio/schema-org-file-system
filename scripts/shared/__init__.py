@@ -20,3 +20,7 @@ from shared.db_utils import get_db_connection, db_connection, DEFAULT_DB_PATH
 from shared.file_ops import resolve_collision
 from shared.ocr_utils import extract_ocr_text, is_ocr_available
 from shared.clip_cache import get_cached_embedding, CLIP_CACHE_AVAILABLE
+try:
+  from shared.clip_cache import get_cached_embeddings_batch
+except ImportError:
+  get_cached_embeddings_batch = None  # type: ignore[assignment]
