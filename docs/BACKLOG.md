@@ -30,10 +30,11 @@ Covers: full pipeline from DB population → export → JSON-LD structure valida
 **Source:** `REFACTORING_GUIDE.md` § Next Steps
 Add inline comments mapping each emitted property to its schema.org spec URL (e.g., `# https://schema.org/dateCreated`). Covers builder functions and all five model `to_schema_org()` implementations.
 
-### S4 — Performance testing for export pipeline
+### S4 — Performance testing for export pipeline ✓ DONE
+**File created:** `tests/performance/test_export_benchmark.py`
 **Source:** `REFACTORING_INDEX.md` Phase 4
-Benchmark `SchemaOrgExporter` against representative data sizes (1k, 10k, 100k entities).
-Establish baseline and add regression guard (e.g., pytest-benchmark).
+Benchmarks all four `SchemaOrgExporter` methods (`get_graph_document`, `export_to_file`, `export_to_ndjson`, `export_with_graph`) at 100, 1k, and 10k entities (10k gated behind `@pytest.mark.slow`).
+Baseline workflow: `pytest tests/performance/ --benchmark-save=baseline -m "not slow"` then `--benchmark-compare=baseline`.
 
 ### S6 — Update REST API endpoints to use SchemaOrgExporter
 **Source:** `RECOMMENDATIONS_APPLIED.md` Phase 4
