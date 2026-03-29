@@ -1,6 +1,6 @@
 # Schema.org File System — ML/AI Audit
 
-**Date:** 2026-03-27 | **Last Updated:** 2026-03-28
+**Date:** 2026-03-27 | **Last Updated:** 2026-03-29
 **Version:** 2.0.0 (was 1.3.0 at audit time)
 **Scope:** 191 files | ~305K LOC
 
@@ -30,8 +30,8 @@
 
 ### Medium Priority
 
-- **God class** — `file_organizer_content_based.py` is 2,691 LOC with a 1,577-LOC `ContentBasedFileOrganizer` class. A refactor plan already exists in `docs/ARCHITECTURE_REFACTOR.md`.
-- **N+1 queries** — no `joinedload` on graph relationships; category queries hit the DB per file.
+- ~~**God class**~~ — **Done** (`49566dd`–`6685adb`): all major classes extracted into `src/classifiers/`, `src/analyzers/`, `src/organizers/`, `src/pipeline/`, `src/utils/`. God-file retained as thin entry point.
+- ~~**N+1 queries**~~ — **Done**: `joinedload`/`selectinload` added on graph relationships.
 - **No fp16/int8 quantization** — CLIP runs full fp32 (~2 GB RAM). Half-precision would cut that in half with ~2x speedup.
 - **No retry on OCR failure** — failed extractions are silently skipped.
 
@@ -48,7 +48,7 @@
 - Graceful degradation on all optional deps (AI, docs, monitoring)
 - ~85% type annotation coverage, mypy configured
 - Graph storage schema is solid — confidence scores on all ML predictions, SHA-256 dedup IDs
-- 12 test files (unit + integration + 6 Playwright E2E specs)
+- 19 test files (unit + integration + 6 Playwright E2E specs; +7 from refactor batch)
 - Sentry error tracking with decorator/context manager patterns
 - Cost-per-feature ROI tracking built into the pipeline
 
@@ -61,8 +61,8 @@
 | 1 | Add `pip-compile` lock file | 1–2 hrs | Done (`cedfe06`) |
 | 2 | CLIP singleton/module-level cache | 2–4 hrs | Done (`8975f3e`) |
 | 3 | Batch CLIP inference (8–32 images) | 6–8 hrs | Open |
-| 4 | `joinedload` on graph queries | 2–3 hrs | Open |
-| 5 | Split `file_organizer_content_based.py` per refactor plan | 1–2 days | Open |
+| 4 | `joinedload` on graph queries | 2–3 hrs | Done |
+| 5 | Split `file_organizer_content_based.py` per refactor plan | 1–2 days | Done (`49566dd`–`6685adb`) |
 | 6 | fp16 quantization for CLIP | 1–2 hrs | Open |
 
 ---
@@ -90,3 +90,15 @@
 | `43c2d32` | Consolidate alignment docs into `SCHEMA_ORG_ARCHITECTURE.md` |
 
 **Schema.org integration** (S1–S10) fully landed in v2.0.0: exporter, variants, context generation, REST API bulk endpoints, validation tests, and benchmarks.
+
+## Post-Audit Commits (2026-03-29)
+
+| Commit | Description |
+|--------|-------------|
+| `49566dd` | Extract `TextExtractor` → `src/analyzers/text_extractor.py` |
+| `4c21368` | Extract `ContentClassifier` → `src/classifiers/` |
+| `ff36546` | Extract `ImageMetadataParser`, `ImageContentAnalyzer` → `src/analyzers/` |
+| `bfc5a7f` | Extract `FileProcessor`, `BatchProcessor` → `src/pipeline/` |
+| `31bf8ab` | Extract `CostTracker`, `FileProcessingErrorTracker` → `src/utils/tracking.py` |
+| `026f584` | Fix: add genius-bar Apple pattern; fix game-asset uppercase guard in organizer |
+| `6685adb` | Extract `ContentOrganizer`, `BaseOrganizer` → `src/organizers/` (merge PR #3) |

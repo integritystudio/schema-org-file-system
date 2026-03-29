@@ -1,0 +1,23 @@
+1) https://arxiv.org/abs/2512.23739 - household item classification challenge - InventoryAI
+2) https://arxiv.org/catchup/cs/2026-01-01?abs=True - Hybrid-Code v2: Zero-Hallucination Clinical ICD-10 Coding via Neuro-Symbolic Verification and Automated Knowledge Base Expansion
+3) DEFT: Differentiable Automatic Test Pattern Generation
+4) https://arxiv.org/abs/2512.23747 - State-of-the-art Small Language Coder Model: Mify-Coder
+5) https://arxiv.org/abs/2512.23749 - Coordinate Matrix Machine: A Human-level Concept Learning to Classify Very Similar Documents - InventoryAI
+6) https://arxiv.org/abs/2512.23755 - HINTS: Extraction of Human Insights from Time-Series Without External Sources
+7) https://arxiv.org/abs/2512.23760 - Audited Skill-Graph Self-Improvement for Agentic LLMs via Verifiable Rewards, Experience Synthesis, and Continual Memory
+8) https://arxiv.org/abs/2512.23762 - Drift-Based Dataset Stability Benchmark
+9) https://arxiv.org/abs/2512.23766 - A Granular Grassmannian Clustering Framework via the Schubert Variety of Best Fit - InventoryAI
+10) https://arxiv.org/abs/2512.23769 - Uncovering Discrimination Clusters: Quantifying and Explaining Systematic Fairness Violations - Integrity - Compliance
+11) Summary of 'Catch-up' in CS since January: https://arxiv.org/catchup/cs/2026-01-01?abs=True
+12 - https://arxiv.org/abs/2512.23781 - Personalized Promotions in Practice: Dynamic Allocation and Reference Effects - Marketing optimization
+13 https://arxiv.org/abs/2602.23365 - Serendipity with Generative AI: Repurposing knowledge components during polycrisis with a Viable Systems Model approach - information 'market-making' in closed systems (companies, coding environments, ect)
+14) https://arxiv.org/abs/2602.23366 - Doc To The Future: Infomorphs for Interactive, Multimodal Document Transformation and Generation - useful for Matt
+15) https://arxiv.org/abs/2602.23367 - HumanMCP: A Human-Like Query Dataset for Evaluating MCP Tool Retrieval Performance - metrics
+16) https://arxiv.org/abs/2602.23368 - Keyword search is all you need: Achieving RAG-Level Performance without vector databases using agentic tool use - efficiency
+17) https://arxiv.org/abs/2602.23370 - Toward General Semantic Chunking: A Discriminative Framework for Ultra-Long Documents - useful for Matt
+18) https://arxiv.org/abs/2602.23373 - An Agentic LLM Framework for Adverse Media Screening in AML Compliance - measurement
+19) https://arxiv.org/abs/2602.23407 - Learning to Generate Secure Code via Token-Level Rewards - efficiency
+19) https://arxiv.org/abs/2602.23413 - EvoX: Meta-Evolution for Automated Discovery - IAP-like systems
+20) https://arxiv.org/abs/2602.23446 - Human Supervision as an Information Bottleneck: A Unified Theory of Error Floors in Human-Guided Learning - why HIL is bad and should feel bad
+21) https://arxiv.org/abs/2602.23481 - IDP Accelerator: Agentic Document Intelligence from Extraction to Compliance Validation - compliance
+
