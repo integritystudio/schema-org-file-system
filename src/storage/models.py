@@ -32,6 +32,8 @@ import hashlib
 import json
 import uuid
 
+from .schema_org_base import SchemaOrgSerializable
+
 from constants import (
     SHA256_HEX_LENGTH,
     UUID_STRING_LENGTH,
@@ -120,7 +122,7 @@ file_locations = Table(
 )
 
 
-class File(Base):
+class File(Base, SchemaOrgSerializable):
     """
     Central node representing a file in the system.
 
@@ -241,6 +243,10 @@ class File(Base):
             return self.canonical_id
         return f"urn:sha256:{self.id}"
 
+    def get_schema_type(self) -> str:
+        """Return the schema.org @type for this file."""
+        return self.schema_type or self.get_schema_type_from_mime(self.mime_type)
+
     @staticmethod
     def get_schema_type_from_mime(mime_type: Optional[str]) -> str:
         """Select appropriate schema.org type based on MIME type."""
@@ -294,7 +300,7 @@ class File(Base):
     def to_schema_org(self) -> Dict[str, Any]:
         """Convert File to schema.org JSON-LD"""
         # Select appropriate type
-        schema_type = self.schema_type or self.get_schema_type_from_mime(self.mime_type)
+        schema_type = self.get_schema_type()
 
         result = {
             "@context": "https://schema.org",
@@ -438,7 +444,7 @@ class File(Base):
         }
 
 
-class Category(Base):
+class Category(Base, SchemaOrgSerializable):
     """
     Category node for file classification.
 
@@ -502,6 +508,10 @@ class Category(Base):
         """
         return str(uuid.uuid5(NAMESPACES['category'], name.lower().strip()))
 
+    def get_schema_type(self) -> str:
+        """Return the schema.org @type for this category."""
+        return "DefinedTerm"
+
     def get_iri(self) -> str:
         """Get the JSON-LD @id IRI for this category."""
         return f"urn:uuid:{self.canonical_id}"
@@ -511,7 +521,7 @@ class Category(Base):
 
         result = {
             "@context": "https://schema.org",
-            "@type": "DefinedTerm",
+            "@type": self.get_schema_type(),
             "@id": self.get_iri(),
             "name": self.name,
         }
@@ -576,7 +586,7 @@ class Category(Base):
         }
 
 
-class Company(Base):
+class Company(Base, SchemaOrgSerializable):
     """
     Company node for organization affiliation.
 
@@ -636,6 +646,10 @@ class Company(Base):
         """
         return str(uuid.uuid5(NAMESPACES['company'], name.lower().strip()))
 
+    def get_schema_type(self) -> str:
+        """Return the schema.org @type for this company."""
+        return "Organization"
+
     def get_iri(self) -> str:
         """Get the JSON-LD @id IRI for this company."""
         return f"urn:uuid:{self.canonical_id}"
@@ -653,7 +667,7 @@ class Company(Base):
 
         result = {
             "@context": "https://schema.org",
-            "@type": "Organization",
+            "@type": self.get_schema_type(),
             "@id": self.get_iri(),
             "name": self.name,
         }
@@ -705,7 +719,7 @@ class Company(Base):
         }
 
 
-class Person(Base):
+class Person(Base, SchemaOrgSerializable):
     """
     Person node for people detected in files.
 
@@ -761,6 +775,10 @@ class Person(Base):
         """
         return str(uuid.uuid5(NAMESPACES['person'], name.lower().strip()))
 
+    def get_schema_type(self) -> str:
+        """Return the schema.org @type for this person."""
+        return "Person"
+
     def get_iri(self) -> str:
         """Get the JSON-LD @id IRI for this person."""
         return f"urn:uuid:{self.canonical_id}"
@@ -770,7 +788,7 @@ class Person(Base):
 
         result = {
             "@context": "https://schema.org",
-            "@type": "Person",
+            "@type": self.get_schema_type(),
             "@id": self.get_iri(),
             "name": self.name,
         }
@@ -830,7 +848,7 @@ class Person(Base):
         }
 
 
-class Location(Base):
+class Location(Base, SchemaOrgSerializable):
     """
     Location node for geographic data.
 
@@ -896,8 +914,8 @@ class Location(Base):
         """Get the JSON-LD @id IRI for this location."""
         return f"urn:uuid:{self.canonical_id}"
 
-    def infer_schema_type(self) -> str:
-        """Determine if this should be Place, City, or Country"""
+    def get_schema_type(self) -> str:
+        """Return the schema.org @type for this location (Place, City, or Country)."""
         if self.city and self.state and self.country:
             return "Place"  # Full address
         elif self.country and not self.state and not self.city:
@@ -910,7 +928,7 @@ class Location(Base):
     def to_schema_org(self) -> Dict[str, Any]:
         """Convert Location to schema.org JSON-LD (Place)"""
 
-        schema_type = self.infer_schema_type()
+        schema_type = self.get_schema_type()
 
         result = {
             "@context": "https://schema.org",

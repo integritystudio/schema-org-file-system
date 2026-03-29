@@ -217,6 +217,26 @@ it returns a new `Image` object; the original context-managed image will close, 
 
 ---
 
+### Schema.org Integration Checklist
+
+Completed in `c2ad740` and `8b64fcf` (`REFACTORING_GUIDE.md` integration checklist):
+
+- [x] Update File class with SchemaOrgSerializable
+- [x] Update Category class with SchemaOrgSerializable
+- [x] Update Company class with SchemaOrgSerializable
+- [x] Update Person class with SchemaOrgSerializable
+- [x] Update Location class with SchemaOrgSerializable
+- [x] Replace manual MIME mapping with MimeTypeMapper
+- [x] Simplify to_schema_org() methods using PropertyBuilder
+- [x] Use builders for relationship properties
+- [x] Replace bulk export functions with SchemaOrgExporter
+- [x] Add variant representations for appropriate entities
+- [x] Update REST API endpoints to use exporter
+- [x] Add tests for new modules
+- [x] Update documentation
+
+---
+
 ### Quality Improvements
 
 | Metric | Before | After | Change |
