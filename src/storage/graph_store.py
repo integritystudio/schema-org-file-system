@@ -767,7 +767,6 @@ class GraphStore:
 
             for _ in range(depth):
                 next_level = []
-                # Collect (file_id, rel_type, confidence) for all new nodes at this level
                 pending: list[tuple[int, str, float]] = []
 
                 for current_id in current_level:
@@ -797,7 +796,6 @@ class GraphStore:
                             next_level.append(rel.source_file_id)
                             pending.append((rel.source_file_id, rel.relationship_type, rel.confidence))
 
-                # Batch-load all new files for this BFS level in a single query
                 if pending:
                     pending_ids = [fid for fid, _, _ in pending]
                     file_map = {
