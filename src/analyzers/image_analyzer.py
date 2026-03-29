@@ -1,0 +1,203 @@
+"""
+Image content analysis using CLIP zero-shot classification and OpenCV face detection.
+"""
+
+from contextlib import nullcontext
+from pathlib import Path
+from typing import Any, Dict, Tuple
+
+# Vision libraries are optional
+try:
+    from transformers import CLIPModel, CLIPProcessor
+    import torch
+    import cv2
+    VISION_AVAILABLE = True
+except ImportError:
+    VISION_AVAILABLE = False
+
+# PIL is needed for opening images in classify_image_content
+try:
+    from PIL import Image
+except ImportError:
+    pass
+
+# Cost tracking is optional
+try:
+    from cost_roi_calculator import CostTracker
+except ImportError:
+    class CostTracker:  # type: ignore[no-redef]
+        """Stub when cost tracking is not installed."""
+
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            pass
+
+        def __enter__(self) -> "CostTracker":
+            return self
+
+        def __exit__(self, *args: Any) -> bool:
+            return False
+
+
+_INTERIOR_CATEGORIES = [
+    "a photo of a home interior room",
+    "a photo of a living room",
+    "a photo of a bedroom",
+    "a photo of a kitchen",
+    "a photo of a bathroom",
+    "a photo of furniture",
+]
+
+_ALL_CATEGORIES = _INTERIOR_CATEGORIES + [
+    "a photo of a house exterior",
+    "a photo of people",
+    "a screenshot",
+    "a photo of outdoors",
+    "a photo of nature",
+]
+
+_INTERIOR_SCORE_THRESHOLD = 0.3
+_PEOPLE_SCORE_THRESHOLD = 0.2
+_PEOPLE_SCORE_LOW_THRESHOLD = 0.15
+_SCREENSHOT_SCORE_THRESHOLD = 0.4
+
+
+class ImageContentAnalyzer:
+    """Analyzes image content using computer vision."""
+
+    def __init__(self, cost_calculator: Any = None) -> None:
+        """
+        Initialize the image content analyzer.
+
+        Args:
+            cost_calculator: Optional cost calculator for tracking usage costs
+        """
+        self.vision_available = VISION_AVAILABLE
+        self.model = None
+        self.processor = None
+        self.face_cascade = None
+        self.cost_calculator = cost_calculator
+
+        if self.vision_available:
+            try:
+                print("Loading CLIP model for image analysis...")
+                self.model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+                self.processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+
+                cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+                self.face_cascade = cv2.CascadeClassifier(cascade_path)
+
+                print("✓ CLIP model loaded successfully")
+            except Exception as e:
+                print(f"Warning: Could not load CLIP model: {e}")
+                self.vision_available = False
+
+    def detect_people(self, image_path: Path) -> bool:
+        """
+        Detect if there are people in the image using face detection.
+
+        Returns:
+            True if people detected, False otherwise
+        """
+        if not self.vision_available or self.face_cascade is None:
+            return False
+
+        ctx = CostTracker(self.cost_calculator, "face_detection") if self.cost_calculator else nullcontext()
+        with ctx:
+            try:
+                img = cv2.imread(str(image_path))
+                if img is None:
+                    return False
+
+                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                faces = self.face_cascade.detectMultiScale(
+                    gray,
+                    scaleFactor=1.1,
+                    minNeighbors=5,
+                    minSize=(30, 30),
+                )
+                return len(faces) > 0
+
+            except Exception as e:
+                print(f"  Face detection error: {e}")
+                return False
+
+    def classify_image_content(self, image_path: Path) -> Dict[str, float]:
+        """
+        Classify image content using CLIP zero-shot classification.
+
+        Returns:
+            Dictionary of category -> confidence score
+        """
+        if not self.vision_available or self.model is None:
+            return {}
+
+        ctx = CostTracker(self.cost_calculator, "clip_vision") if self.cost_calculator else nullcontext()
+        with ctx:
+            try:
+                image = Image.open(image_path)
+
+                inputs = self.processor(
+                    text=_ALL_CATEGORIES,
+                    images=image,
+                    return_tensors="pt",
+                    padding=True,
+                )
+
+                with torch.no_grad():
+                    outputs = self.model(**inputs)
+                    logits_per_image = outputs.logits_per_image
+                    probs = logits_per_image.softmax(dim=1)
+
+                return {category: float(probs[0][i]) for i, category in enumerate(_ALL_CATEGORIES)}
+
+            except Exception as e:
+                print(f"  Image classification error: {e}")
+            return {}
+
+    def is_home_interior_no_people(self, image_path: Path) -> Tuple[bool, Dict[str, float]]:
+        """
+        Check if image is a home interior without people.
+
+        Returns:
+            Tuple of (is_interior_no_people, classification_scores)
+        """
+        if not self.vision_available:
+            return (False, {})
+
+        scores = self.classify_image_content(image_path)
+
+        if not scores:
+            return (False, {})
+
+        interior_score = max(scores.get(cat, 0) for cat in _INTERIOR_CATEGORIES)
+        people_score = scores.get("a photo of people", 0)
+        has_faces = self.detect_people(image_path)
+
+        is_interior = interior_score > _INTERIOR_SCORE_THRESHOLD
+        has_people = people_score > _PEOPLE_SCORE_THRESHOLD or has_faces
+
+        return (is_interior and not has_people, scores)
+
+    def has_people_in_photo(self, image_path: Path) -> Tuple[bool, Dict[str, float]]:
+        """
+        Check if image contains people (for social photos).
+
+        Returns:
+            Tuple of (has_people, classification_scores)
+        """
+        if not self.vision_available:
+            return (False, {})
+
+        scores = self.classify_image_content(image_path)
+
+        if not scores:
+            return (False, {})
+
+        people_score = scores.get("a photo of people", 0)
+        has_faces = self.detect_people(image_path)
+        screenshot_score = scores.get("a screenshot", 0)
+        is_screenshot = screenshot_score > _SCREENSHOT_SCORE_THRESHOLD
+
+        has_people = (people_score > _PEOPLE_SCORE_LOW_THRESHOLD or has_faces) and not is_screenshot
+
+        return (has_people, scores)
