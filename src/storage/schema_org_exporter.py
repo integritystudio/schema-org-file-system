@@ -252,6 +252,27 @@ class SchemaOrgExporter:
         }
 
     @staticmethod
+    def _build_load_options() -> Dict[Type, List]:
+        """Return per-entity selectinload options to avoid N+1 queries."""
+        from .models import File, Category, Company, Person, Location
+        return {
+            File: [
+                selectinload(File.categories),
+                selectinload(File.companies),
+                selectinload(File.people),
+                selectinload(File.locations),
+            ],
+            Category: [
+                selectinload(Category.files),
+                joinedload(Category.parent),
+                selectinload(Category.subcategories),
+            ],
+            Company: [selectinload(Company.files)],
+            Person: [selectinload(Person.files)],
+            Location: [selectinload(Location.files)],
+        }
+
+    @staticmethod
     def _default_entity_classes() -> List[Type[SchemaOrgSerializable]]:
         """Return the canonical set of entity classes for full exports."""
         # Import here to avoid circular imports at module load time
