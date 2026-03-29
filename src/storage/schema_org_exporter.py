@@ -200,6 +200,35 @@ class SchemaOrgExporter:
                 records.append(row.to_schema_org())
         return records
 
+    # ------------------------------------------------------------------
+    # Context document helpers (S8)
+    # ------------------------------------------------------------------
+
+    def get_context_document(self) -> Dict[str, Any]:
+        """Return the JSON-LD @context document as a Python dict.
+
+        Delegates to :mod:`storage.schema_org_context`.
+
+        Returns:
+            Dict containing the standalone @context document.
+        """
+        from .schema_org_context import get_context_document
+        return get_context_document()
+
+    def export_context(
+        self,
+        output_path: Union[str, Path],
+        pretty: bool = True,
+    ) -> None:
+        """Save the JSON-LD @context document to a file.
+
+        Args:
+            output_path: Destination file path.
+            pretty: Whether to pretty-print (indent=2).
+        """
+        from .schema_org_context import export_context
+        export_context(output_path, pretty=pretty)
+
     @staticmethod
     def _default_entity_classes() -> List[Type[SchemaOrgSerializable]]:
         """Return the canonical set of entity classes for full exports."""

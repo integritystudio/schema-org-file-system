@@ -17,6 +17,7 @@ from storage.models import (
     Base
 )
 from storage.models import init_db, get_session
+from storage.schema_org_exporter import SchemaOrgExporter
 from api.schema_org_models import (
     FileSchemaOrg, CategorySchemaOrg, CompanySchemaOrg,
     PersonSchemaOrg, LocationSchemaOrg, BulkExportResponse,
@@ -322,44 +323,64 @@ async def get_locations_schema_org_bulk(
 
 
 # Bulk Export Endpoint
-@app.get("/api/schema-org/export", response_model=BulkExportResponse)
+@app.get("/api/schema-org/export", response_model=Dict[str, Any])
 async def export_all_entities_schema_org(
     params: BulkExportParams = Depends(),
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
-    Export all entities as schema.org JSON-LD.
+    Export all entities as schema.org JSON-LD @graph document.
 
     Args:
         params: Export parameters (entity_types)
 
     Returns:
-        Dictionary with entity type keys containing arrays of schema.org objects
+        JSON-LD document with @context and @graph keys containing all matching entities
     """
-    export = {}
     entity_types_list = [t.strip().lower() for t in params.entity_types.split(",")]
 
+    entity_classes = []
     if "all" in entity_types_list or "file" in entity_types_list:
-        files = db.query(File).all()
-        export["files"] = [f.to_schema_org() for f in files]
-
+        entity_classes.append(File)
     if "all" in entity_types_list or "category" in entity_types_list:
-        categories = db.query(Category).all()
-        export["categories"] = [c.to_schema_org() for c in categories]
-
+        entity_classes.append(Category)
     if "all" in entity_types_list or "company" in entity_types_list:
-        companies = db.query(Company).all()
-        export["companies"] = [c.to_schema_org() for c in companies]
-
+        entity_classes.append(Company)
     if "all" in entity_types_list or "person" in entity_types_list:
-        people = db.query(Person).all()
-        export["people"] = [p.to_schema_org() for p in people]
-
+        entity_classes.append(Person)
     if "all" in entity_types_list or "location" in entity_types_list:
-        locations = db.query(Location).all()
-        export["locations"] = [l.to_schema_org() for l in locations]
+        entity_classes.append(Location)
 
-    return export
+    exporter = SchemaOrgExporter(db)
+    return exporter.get_graph_document(entity_classes=entity_classes or None)
+
+
+# Graph Export Endpoint
+@app.get("/api/schema-org/graph", response_model=Dict[str, Any])
+async def get_full_graph_document(
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """
+    Return a full JSON-LD @graph document for all entity types.
+
+    Returns:
+        JSON-LD document with @context and @graph containing all entities
+    """
+    exporter = SchemaOrgExporter(db)
+    return exporter.get_graph_document()
+
+
+# Context Endpoint
+@app.get("/schema/context", response_model=Dict[str, Any])
+async def get_schema_context() -> Dict[str, Any]:
+    """
+    Return the JSON-LD @context document for this API.
+
+    Returns:
+        Standalone JSON-LD context document mapping all schema.org and custom terms
+    """
+    from storage.schema_org_context import get_context_document
+    return get_context_document()
 
 
 # Health Check
